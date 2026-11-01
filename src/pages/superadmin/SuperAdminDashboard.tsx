@@ -140,8 +140,9 @@ export default function SuperAdminDashboard() {
 
   const copyCredentials = () => {
     if (!created) return;
-    const loginUrl = `${window.location.origin}/signin`;
-    const text = `🛍️ আপনার নতুন স্টোর প্রস্তুত!\n\nস্টোরের নাম: ${created.storeName}\nস্টোর লিংক: ${created.slug}\n\nলগইন লিংক: ${loginUrl}\nইমেইল: ${created.email}\nপাসওয়ার্ড: ${created.password}`;
+    const storeUrl = `${window.location.origin}/?store=${created.slug}`;
+    const loginUrl = `${window.location.origin}/signin?store=${created.slug}`;
+    const text = `🛍️ আপনার নতুন স্টোর প্রস্তুত!\n\nস্টোরের নাম: ${created.storeName}\nস্টোর লিংক: ${storeUrl}\n\nলগইন লিংক: ${loginUrl}\nইমেইল: ${created.email}\nপাসওয়ার্ড: ${created.password}`;
     navigator.clipboard
       .writeText(text)
       .then(() => toast.success('কপি হয়েছে! এখন কাস্টমারকে পাঠিয়ে দিন।'))
@@ -209,7 +210,7 @@ export default function SuperAdminDashboard() {
               />
               {slug && (
                 <p className="text-xs text-emerald-400 mt-1.5">
-                  স্টোর লিংক হবে: <span className="font-mono">{slug}.আপনার-ডোমেইন.com</span>
+                  স্টোর লিংক হবে: <span className="font-mono">{window.location.origin}/?store={slug}</span>
                 </p>
               )}
             </div>
@@ -252,7 +253,8 @@ export default function SuperAdminDashboard() {
               </p>
               <div className="text-sm text-slate-200 space-y-1 font-mono break-all">
                 <p>স্টোর: {created.storeName}</p>
-                <p>লগইন: {typeof window !== 'undefined' ? window.location.origin : ''}/signin</p>
+                <p>স্টোর লিংক: {window.location.origin}/?store={created.slug}</p>
+                <p>লগইন: {window.location.origin}/signin?store={created.slug}</p>
                 <p>ইমেইল: {created.email}</p>
                 <p>পাসওয়ার্ড: {created.password}</p>
               </div>

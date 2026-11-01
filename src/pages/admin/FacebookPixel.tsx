@@ -124,7 +124,7 @@ export default function AdminFacebookPixel() {
 
       const { error } = await supabase
         .from('settings')
-        .upsert(updates, { onConflict: 'key' });
+        .upsert(updates, { onConflict: 'store_id,key' });
 
       if (error) throw error;
 

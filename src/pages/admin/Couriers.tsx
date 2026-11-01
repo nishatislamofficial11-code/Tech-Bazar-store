@@ -129,7 +129,7 @@ export default function AdminCouriers() {
       for (const item of updates) {
         const { error } = await supabase
           .from('settings')
-          .upsert({ key: item.key, value: item.value }, { onConflict: 'key' });
+          .upsert({ key: item.key, value: item.value }, { onConflict: 'store_id,key' });
         if (error) throw error;
       }
 

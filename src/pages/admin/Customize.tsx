@@ -185,7 +185,7 @@ export default function AdminCustomize() {
       for (const update of updates) {
         const { error } = await supabase
           .from('settings')
-          .upsert({ ...update }, { onConflict: 'key' });
+          .upsert({ ...update }, { onConflict: 'store_id,key' });
 
         if (error) throw error;
       }

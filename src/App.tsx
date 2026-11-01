@@ -63,6 +63,7 @@ const CartDrawer = lazy(() => import('./components/layout/CartDrawer').then((m) 
 import { FacebookPixelTracker } from './components/layout/FacebookPixelTracker';
 import { PageTracker } from './components/layout/PageTracker';
 import { GlobalIpGuard } from './components/GlobalIpGuard';
+import { StoreGate } from './components/StoreGate';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -187,7 +188,7 @@ export default function App() {
               <GlobalIpGuard>
                 <AppErrorBoundary>
                   <Suspense fallback={<PageLoader />}>
-                    <Routes>
+                    <StoreGate><Routes>
                       <Route path="/" element={<FrontendLayout />}>
                         <Route index element={<HomePage />} />
                         <Route path="product/:id" element={<ProductDetails />} />
@@ -242,7 +243,7 @@ export default function App() {
 
                       {/* Catch-all Not Found Route */}
                       <Route path="*" element={<NotFound />} />
-                    </Routes>
+                    </Routes></StoreGate>
                   </Suspense>
                 </AppErrorBoundary>
               </GlobalIpGuard>

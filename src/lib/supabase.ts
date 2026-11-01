@@ -1,10 +1,13 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { currentStoreSlug } from './currentStore';
 import { isDemoModeActive, createMockMutationBuilder } from './demoMode';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://tvfhsgokbwekpfyrmhbl.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_F2Vql83Ewz488LnbxNFkQQ_61zuR9PS';
 
-export const rawSupabase = createClient(supabaseUrl, supabaseAnonKey);
+export const rawSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: { headers: currentStoreSlug ? { 'x-store': currentStoreSlug } : {} },
+});
 
 /**
  * Proxied Supabase client that seamlessly intercepts mutation calls (insert/update/upsert/delete)

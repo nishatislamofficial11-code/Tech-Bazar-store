@@ -245,7 +245,7 @@ export default function AdminSettings() {
 
       const { error: upsertError } = await supabase
         .from('settings')
-        .upsert(rows, { onConflict: 'key' });
+        .upsert(rows, { onConflict: 'store_id,key' });
 
       if (upsertError) {
         // Fallback to individual updates if upsert has an issue
