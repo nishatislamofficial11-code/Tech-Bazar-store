@@ -3,6 +3,13 @@
 @theme {
   --color-primary: #0066ff;
   --color-primary-hover: #005ce6;
+  --color-payment-text: #17212b;
+  --color-payment-muted: #64748b;
+  --color-payment-surface: #ffffff;
+  --color-payment-border: #dce2e8;
+  --color-payment-on-primary: #ffffff;
+  --color-store-search-surface: #1e293b;
+  --color-store-search-border: #334155;
   --font-sans: 'Manrope', 'Inter', 'Noto Sans Bengali', sans-serif;
 }
 
