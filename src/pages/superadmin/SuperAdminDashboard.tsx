@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
-import { Store, Plus, Copy, LogOut, RefreshCw, CheckCircle2, XCircle, Settings2 } from 'lucide-react';
+import { Store, Plus, Copy, LogOut, RefreshCw, CheckCircle2, XCircle, Settings2, Trash2 } from 'lucide-react';
 
 interface StoreRow {
   id: string;
@@ -61,6 +61,25 @@ export default function SuperAdminDashboard() {
     navigator.clipboard.writeText(text)
       .then(() => toast.success('কপি হয়েছে!'))
       .catch(() => toast.error('কপি করা যায়নি, নিজে লিখে নিন।'));
+  };
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const handleDeleteStore = async (store: StoreRow) => {
+    const typed = window.prompt(`সাবধান! "${store.name}" দোকানের সব পণ্য, অর্ডার, সেটিংস আর মালিকের একাউন্ট চিরতরে মুছে যাবে, আর ফেরত আনা যাবে না।\n\nনিশ্চিত হলে নিচে লিখুন: ${store.slug}`);
+    if (typed === null) return;
+    if (typed.trim().toLowerCase() !== store.slug) { toast.error('লেখা মেলেনি, মুছা হয়নি।'); return; }
+    setDeletingId(store.id);
+    try {
+      const { error } = await supabase.rpc('super_delete_store', { p_store_id: store.id });
+      if (error) throw error;
+      toast.success('দোকান চিরতরে মুছে ফেলা হয়েছে।');
+      setOpenId(null);
+      await loadStores();
+    } catch (err: any) {
+      toast.error(err?.message || 'মুছা যায়নি।');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const handleSaveStore = async (store: StoreRow) => {
@@ -428,6 +447,14 @@ export default function SuperAdminDashboard() {
                         className="w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold py-2.5 text-sm"
                       >
                         {saving ? 'সেভ হচ্ছে...' : 'সেভ করুন'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteStore(store)}
+                        disabled={deletingId === store.id}
+                        className="w-full flex items-center justify-center gap-2 rounded-lg border border-red-500/60 text-red-400 hover:bg-red-500/10 disabled:opacity-50 font-bold py-2.5 text-sm"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {deletingId === store.id ? 'মুছা হচ্ছে...' : 'দোকান চিরতরে মুছে ফেলুন'}
                       </button>
                     </div>
                   )}
