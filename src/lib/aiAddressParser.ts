@@ -246,7 +246,7 @@ export async function parseAddressWithAI(
       const map: any = {};
       data?.forEach(s => { map[s.key] = s.value; });
 
-      apiKey = map.ai_parser_api_key || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+      apiKey = map.ai_parser_api_key || '' // each store must use its own key;
       provider = map.ai_parser_provider || provider;
       endpointUrl = map.ai_parser_endpoint || '';
       model = map.ai_parser_model || '';
