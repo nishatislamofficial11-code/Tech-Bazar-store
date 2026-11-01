@@ -1,0 +1,5 @@
+# Cloudflare Pages Direct Rewrites
+/api/catalog-feed.php  /api/catalog-feed  200
+/api/courier-proxy.php /api/courier-proxy 200
+/api/courier-webhook.php /api/courier-webhook 200
+/sitemap.xml /sitemap.xml 200

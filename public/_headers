@@ -1,0 +1,24 @@
+# Cloudflare Pages Headers
+
+# Ensure HTML files are never aggressively cached so visitors always receive the latest chunk hashes
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+/
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+# Long term immutable caching for Vite hashed production bundles
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# XML / API Feeds
+/feed/*
+  Cache-Control: no-cache, no-store, must-revalidate
+/catalog.xml
+  Cache-Control: no-cache, no-store, must-revalidate
+/sitemap.xml
+  Cache-Control: public, max-age=3600

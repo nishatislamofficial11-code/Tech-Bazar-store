@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://res.cloudinary.com">
+    <title>Online Shopping in Bangladesh</title>
+    <meta name="description" content="Shop authentic products at best prices in Bangladesh with fast home delivery and cash on delivery." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Online Shopping in Bangladesh" />
+    <meta property="og:description" content="Shop authentic products at best prices in Bangladesh with fast home delivery and cash on delivery." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" as="style">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    </noscript>
+  </head>
+  <body class="overflow-x-hidden">
+    <div id="root"></div>
+    <script>
+      (function() {
+        var reloadKey = 'chunk_reload_lock';
+        function checkAndReload(msg) {
+          if (!msg) return;
+          var str = String(msg);
+          if (
+            str.indexOf('dynamically imported module') !== -1 ||
+            str.indexOf('Strict MIME type checking') !== -1 ||
+            str.indexOf('Loading chunk') !== -1 ||
+            str.indexOf('Expected a JavaScript or Wasm module script') !== -1
+          ) {
+            var last = sessionStorage.getItem(reloadKey);
+            var now = Date.now();
+            if (!last || now - parseInt(last, 10) > 15000) {
+              sessionStorage.setItem(reloadKey, String(now));
+              window.location.reload();
+            }
+          }
+        }
+        window.addEventListener('vite:preloadError', function(e) {
+          e.preventDefault();
+          checkAndReload('dynamically imported module');
+        });
+        window.addEventListener('error', function(e) {
+          checkAndReload(e.message || (e.error && e.error.message));
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+          checkAndReload(e.reason && (e.reason.message || e.reason));
+        });
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
