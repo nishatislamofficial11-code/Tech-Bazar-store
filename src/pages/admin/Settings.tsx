@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { useSettings } from '../../contexts/SettingsContext';
 import { sendTelegramMessage, autoFetchTelegramChatId, TelegramBotItem, parseTelegramBots } from '../../lib/telegramApi';
 import { CloudinaryUpload } from '../../components/CloudinaryUpload';
+import { StorePaymentSettings } from '../../components/admin/StorePaymentSettings';
 
 const tabs = [
   { id: 'general', label: 'General' },
@@ -16,6 +17,7 @@ const tabs = [
   { id: 'delivery', label: 'Checkout & Delivery' },
   { id: 'telegram', label: 'Telegram Notifications' },
   { id: 'mobile_app', label: '📱 Mobile App Connect' },
+  { id: 'payments', label: 'পেমেন্ট' },
 ];
 
 export default function AdminSettings() {
@@ -386,7 +388,8 @@ WITH CHECK (
                   {activeTab === 'mobile_app' && 'Connect and sync your store with the Android Admin mobile application.'}
                 </p>
              </div>
-             {activeTab !== 'mobile_app' && (
+             {activeTab === 'payments' && <StorePaymentSettings />}
+             {activeTab !== 'mobile_app' && activeTab !== 'payments' && (
                <div className="flex items-center gap-3 shrink-0">
                   <button type="button" onClick={() => fetchSettings()} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200">
                     Cancel
