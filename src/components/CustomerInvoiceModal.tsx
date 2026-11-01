@@ -1,6 +1,8 @@
 import React, { useRef } from 'react';
 import { X, Printer, Download, CheckCircle, FileText } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
+import { PaymentSummary } from './PaymentSummary';
+import type { PaymentRecord } from '../lib/paymentRules';
 
 export interface CustomerInvoiceItem {
   title: string;
@@ -9,7 +11,7 @@ export interface CustomerInvoiceItem {
   price: number;
 }
 
-export interface CustomerInvoiceData {
+export interface CustomerInvoiceData extends PaymentRecord {
   orderId: string;
   created_at?: string;
   customerName: string;
@@ -241,9 +243,7 @@ export function CustomerInvoiceModal({ isOpen, onClose, invoice }: CustomerInvoi
                 <span>Total Payable:</span>
                 <span className="text-primary font-mono text-base">৳{invoice.totalAmount.toLocaleString()}</span>
               </div>
-              <div className="text-[10px] text-slate-500 text-right mt-1 font-bold">
-                Payment: Cash on Delivery (ক্যাশ অন ডেলিভারি)
-              </div>
+              <PaymentSummary order={{ ...invoice, total_amount: invoice.totalAmount }} />
             </div>
           </div>
         </div>
