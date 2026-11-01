@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
-import { Store, Plus, Copy, LogOut, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
+import { Store, Plus, Copy, LogOut, RefreshCw, CheckCircle2, XCircle, Settings2 } from 'lucide-react';
 
 interface StoreRow {
   id: string;
@@ -35,6 +35,59 @@ export default function SuperAdminDashboard() {
   const [created, setCreated] = useState<CreatedCredentials | null>(null);
 
   const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  // Manage existing store (details + change owner login)
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<{ id: string; email: string; password: string } | null>(null);
+
+  const openManage = (store: StoreRow) => {
+    if (openId === store.id) { setOpenId(null); return; }
+    setOpenId(store.id);
+    setEditName(store.name);
+    setEditEmail(store.admin_email || '');
+    setEditPassword('');
+  };
+
+  const storeInfoText = (store: StoreRow, email: string, password?: string) => {
+    const o = window.location.origin;
+    return `🛍️ আপনার স্টোরের তথ্য\n\nস্টোরের নাম: ${store.name}\nস্টোর লিংক: ${o}/?store=${store.slug}\n\nলগইন লিংক: ${o}/signin?store=${store.slug}\nইমেইল: ${email}` + (password ? `\nপাসওয়ার্ড: ${password}` : '');
+  };
+
+  const copyText = (text: string) => {
+    navigator.clipboard.writeText(text)
+      .then(() => toast.success('কপি হয়েছে!'))
+      .catch(() => toast.error('কপি করা যায়নি, নিজে লিখে নিন।'));
+  };
+
+  const handleSaveStore = async (store: StoreRow) => {
+    if (saving) return;
+    if (editPassword && editPassword.length < 6) {
+      toast.error('পাসওয়ার্ড কমপক্ষে ৬ অক্ষর দিন।');
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase.rpc('super_update_store', {
+        p_store_id: store.id,
+        p_store_name: editName.trim(),
+        p_admin_email: editEmail.trim(),
+        p_new_password: editPassword || null,
+      });
+      if (error) throw error;
+      setLastSaved({ id: store.id, email: editEmail.trim().toLowerCase(), password: editPassword });
+      setEditPassword('');
+      toast.success('সেভ হয়েছে!');
+      await loadStores();
+    } catch (err: any) {
+      toast.error(err?.message || 'সেভ করা যায়নি।');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const loadStores = useCallback(async () => {
     const { data, error } = await supabase
@@ -289,9 +342,9 @@ export default function SuperAdminDashboard() {
           ) : (
             <div className="space-y-3">
               {stores.map((store) => (
+                <div key={store.id} className="rounded-xl bg-slate-800/60 border border-slate-700/60">
                 <div
-                  key={store.id}
-                  className="flex items-center justify-between gap-3 rounded-xl bg-slate-800/60 border border-slate-700/60 p-4"
+                  className="flex items-center justify-between gap-3 p-4"
                 >
                   <div className="min-w-0">
                     <p className="font-bold text-sm truncate">{store.name}</p>
@@ -325,6 +378,60 @@ export default function SuperAdminDashboard() {
                       }`}
                     />
                   </button>
+                </div>
+                <div className="px-4 pb-4">
+                  <button
+                    onClick={() => openManage(store)}
+                    className="flex items-center gap-1.5 text-xs font-bold text-emerald-400"
+                  >
+                    <Settings2 className="h-4 w-4" />
+                    {openId === store.id ? 'বন্ধ করুন' : 'বিস্তারিত / পরিবর্তন'}
+                  </button>
+                  {openId === store.id && (
+                    <div className="mt-3 space-y-3">
+                      <div className="text-xs text-slate-300 space-y-1 font-mono break-all bg-slate-900 rounded-lg p-3">
+                        <p>স্টোর লিংক: {window.location.origin}/?store={store.slug}</p>
+                        <p>লগইন: {window.location.origin}/signin?store={store.slug}</p>
+                        <p>ইমেইল: {store.admin_email || '—'}</p>
+                        <p>
+                          পাসওয়ার্ড:{' '}
+                          {lastSaved?.id === store.id && lastSaved.password
+                            ? lastSaved.password
+                            : 'লুকানো (নিরাপত্তার জন্য দেখা যায় না — নিচে নতুন পাসওয়ার্ড দিন)'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => copyText(storeInfoText(store, store.admin_email || '', lastSaved?.id === store.id ? lastSaved.password : undefined))}
+                        className="flex items-center gap-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-2"
+                      >
+                        <Copy className="h-4 w-4" /> তথ্য কপি করুন
+                      </button>
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">স্টোরের নাম</label>
+                        <input value={editName} onChange={(e) => setEditName(e.target.value)}
+                          className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">মালিকের লগইন ইমেইল</label>
+                        <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)}
+                          className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-300 mb-1">নতুন পাসওয়ার্ড (না বদলাতে চাইলে খালি রাখুন)</label>
+                        <input type="text" value={editPassword} onChange={(e) => setEditPassword(e.target.value)}
+                          placeholder="কমপক্ষে ৬ অক্ষর"
+                          className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+                      </div>
+                      <button
+                        onClick={() => handleSaveStore(store)}
+                        disabled={saving}
+                        className="w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold py-2.5 text-sm"
+                      >
+                        {saving ? 'সেভ হচ্ছে...' : 'সেভ করুন'}
+                      </button>
+                    </div>
+                  )}
+                </div>
                 </div>
               ))}
             </div>
