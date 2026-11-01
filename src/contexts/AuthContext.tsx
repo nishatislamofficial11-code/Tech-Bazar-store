@@ -74,8 +74,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
           }
         } else {
-          setProfile(data);
-          setDemoModeActive(data.role === 'demo');
+          // A store owner is only an admin on their OWN store; elsewhere they are a normal customer.
+          let effective = data;
+          if (['admin', 'manager', 'demo'].includes(data.role) && data.store_id) {
+            const { data: here } = await supabase.rpc('current_store_id');
+            if (here && here !== data.store_id) effective = { ...data, role: 'user' };
+          }
+          setProfile(effective);
+          setDemoModeActive(effective.role === 'demo');
         }
       } else {
          console.warn('Could not fetch profile, attempting to recreate it:', error);
