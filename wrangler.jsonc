@@ -2,6 +2,11 @@
   "name": "tech-bazar-store",
   "main": "worker.js",
   "compatibility_date": "2025-01-01",
+  "keep_vars": true,
+  "vars": {
+    "SUPABASE_URL": "https://tvfhsgokbwekpfyrmhbl.supabase.co",
+    "SUPABASE_ANON_KEY": "sb_publishable_F2Vql83Ewz488LnbxNFkQQ_61zuR9PS"
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
