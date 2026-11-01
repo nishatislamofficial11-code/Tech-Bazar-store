@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useSettings } from '../contexts/SettingsContext';
 import { getCachedData, setCachedData } from '../lib/cache';
 import { SEO } from '../components/SEO';
+import toast from 'react-hot-toast';
 
 const CategoryGrid = lazy(() => import('../components/home/CategoryGrid').then(m => ({ default: m.CategoryGrid })));
 const ProductSection = lazy(() => import('../components/home/ProductSection').then(m => ({ default: m.ProductSection })));
@@ -56,6 +57,20 @@ export default function HomePage() {
     return Array.isArray(cached) ? cached : [];
   });
   const [loadingProducts, setLoadingProducts] = useState(flashSaleProducts.length === 0 && bestDealProducts.length === 0);
+
+  // Show payment outcome after gateway redirect (?payment=success|failed|cancelled)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const outcome = params.get('payment');
+    if (!outcome) return;
+    if (outcome === 'success') toast.success('আপনার পেমেন্ট সফল হয়েছে! অর্ডারটি নিশ্চিত করা হয়েছে।');
+    else if (outcome === 'failed') toast.error('পেমেন্ট ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+    else if (outcome === 'cancelled') toast.error('পেমেন্ট বাতিল করা হয়েছে।');
+    params.delete('payment');
+    params.delete('order');
+    const qs = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+  }, []);
 
   useEffect(() => {
     const fetchProducts = async () => {
