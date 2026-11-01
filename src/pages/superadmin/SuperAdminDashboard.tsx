@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
-import { Store, Plus, Copy, LogOut, RefreshCw, CheckCircle2, XCircle, Settings2, Trash2 } from 'lucide-react';
+import { Store, Plus, Copy, LogOut, RefreshCw, CheckCircle2, XCircle, Settings2, Trash2, Search } from 'lucide-react';
+import { filterStores } from '../../lib/storeSearch';
 
 interface StoreRow {
   id: string;
@@ -26,6 +27,8 @@ export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [stores, setStores] = useState<StoreRow[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState('');
+  const filteredStores = filterStores(stores, search);
 
   const [storeName, setStoreName] = useState('');
   const [slug, setSlug] = useState('');
@@ -356,11 +359,29 @@ export default function SuperAdminDashboard() {
             </button>
           </div>
 
+          <div className="relative mb-4">
+            <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 pointer-events-none" />
+            <input
+              type="search"
+              aria-label="স্টোর খুঁজুন"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="নাম, ইমেইল বা লিংকের নাম"
+              className="w-full min-w-0 rounded-lg border border-slate-700 bg-slate-800 py-3 pl-10 pr-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+          {search.trim() && (
+            <p role="status" aria-live="polite" className="mb-3 text-sm text-slate-400">
+              {filteredStores.length}টি স্টোর পাওয়া গেছে
+            </p>
+          )}
           {stores.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-6">এখনো কোনো স্টোর নেই।</p>
+          ) : filteredStores.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">কোনো স্টোর পাওয়া যায়নি।</p>
           ) : (
             <div className="space-y-3">
-              {stores.map((store) => (
+              {filteredStores.map((store) => (
                 <div key={store.id} className="rounded-xl bg-slate-800/60 border border-slate-700/60">
                 <div
                   className="flex items-center justify-between gap-3 p-4"
