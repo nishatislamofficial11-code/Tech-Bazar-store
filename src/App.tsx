@@ -54,6 +54,8 @@ const SitePageViewer = lazy(() => import('./pages/SitePageViewer'));
 const TrackOrder = lazy(() => import('./pages/TrackOrder'));
 const Shop = lazy(() => import('./pages/Shop'));
 const CatalogFeed = lazy(() => import('./pages/CatalogFeed'));
+const SuperAdminLogin = lazy(() => import('./pages/superadmin/SuperAdminLogin'));
+const SuperAdminDashboard = lazy(() => import('./pages/superadmin/SuperAdminDashboard'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const SidebarMenu = lazy(() => import('./components/layout/SidebarMenu').then((m) => ({ default: m.SidebarMenu })));
 const SearchOverlay = lazy(() => import('./components/layout/SearchOverlay').then((m) => ({ default: m.SearchOverlay })));
@@ -202,6 +204,8 @@ export default function App() {
                       
                       <Route path="/signin" element={<SignIn />} />
                       <Route path="/signup" element={<SignUp />} />
+                      <Route path="/super-admin/login" element={<SuperAdminLogin />} />
+                      <Route path="/super-admin" element={<SuperAdminDashboard />} />
                       <Route path="/profile" element={<UserProfile />} />
 
                       <Route path="/admin" element={<AdminLayout />}>
