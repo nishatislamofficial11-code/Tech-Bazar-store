@@ -24,11 +24,15 @@ import {
 } from '../data/bangladeshData';
 import { fetchClientIp, checkIsBlocked, trapBlacklistIp } from '../lib/blacklist';
 import { trackEvent } from '../lib/analytics';
+import { CheckoutPaymentOptions, useCheckoutPayment } from '../components/CheckoutPaymentOptions';
+import { paymentRequest } from '../lib/storePaymentApi';
+import { paymentQuote } from '../lib/paymentRules';
 
 export default function Checkout() {
   const { items, cartTotal, clearCart } = useCart();
   const { user } = useAuth();
   const { settings, loading } = useSettings();
+  const payment = useCheckoutPayment();
   const navigate = useNavigate();
 
   const updateAddressFields = (divId: string, distId: string, upa: string, street: string) => {
@@ -300,7 +304,7 @@ export default function Checkout() {
         <motion.div 
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.6, type: 'spring', bounce: 0.4 }}
+          transition={{ duration: 0.6, type: 'spring' as const, bounce: 0.4 }}
           className="max-w-md w-full relative z-10"
         >
           <div className="bg-white rounded-[2.5rem] p-8 shadow-2xl shadow-slate-200/50 border border-slate-100/60 backdrop-blur-xl relative overflow-hidden text-center">
@@ -308,7 +312,7 @@ export default function Checkout() {
             <motion.div 
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ type: "spring", damping: 12, stiffness: 100, delay: 0.2 }}
+              transition={{ type: "spring" as const, damping: 12, stiffness: 100, delay: 0.2 }}
               className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-xl shadow-emerald-100/50 ring-8 ring-emerald-50 relative"
             >
               <motion.div
@@ -478,6 +482,8 @@ export default function Checkout() {
     setOrderStatus('processing');
 
     try {
+      const quote = paymentQuote(payment.method, orderTotal, shippingCharge, payment.config.fixedAdvance);
+      if (payment.method !== 'cod' && !payment.config.configured) throw new Error('এই দোকানে অনলাইন পেমেন্ট এখনো চালু হয়নি।');
       // 1. Create Order
       const shortId = Math.random().toString(36).substring(2, 10).toUpperCase();
       const trackingId = `ORD-${shortId}`;
@@ -500,7 +506,12 @@ export default function Checkout() {
           total_amount: orderTotal,
           shipping_address: deliveryInfo,
           status: 'pending',
-          order_source: localStorage.getItem('order_source') || 'organic'
+          order_source: localStorage.getItem('order_source') || 'organic',
+          payment_method: payment.method,
+          advance_required: quote.required,
+          advance_paid: 0,
+          payment_status: 'unpaid',
+          shipping_charge: shippingCharge
         }])
         .select()
         .single();
@@ -525,6 +536,13 @@ export default function Checkout() {
         .insert(orderItems);
 
       if (itemsError) throw itemsError;
+
+      // Online payment: send the customer to the gateway page
+      if (payment.method !== 'cod') {
+        const { redirectUrl } = await paymentRequest<{ redirectUrl: string }>('initiate', { orderId: orderParams.id });
+        window.location.href = redirectUrl;
+        return;
+      }
 
       // Decrement inventory stock for ordered items
       for (const item of items) {
@@ -590,7 +608,7 @@ export default function Checkout() {
         totalAmount: orderTotal,
         items: items.map(item => {
           let itemTitle = item.product.title || item.product.name || 'Product';
-          let variantStr = undefined;
+          let variantStr: string | undefined;
           if (item.product.selectedVariants) {
             variantStr = Object.entries(item.product.selectedVariants).map(([k, v]) => `${k}: ${v}`).join(', ');
           }
@@ -888,13 +906,7 @@ export default function Checkout() {
                      )}
                    </div>
                    
-                   <div className="flex items-center justify-between gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-emerald-700">
-                     <span className="flex items-center gap-2 font-bold">
-                       <Truck size={18} />
-                       Payment Method
-                     </span>
-                     <span className="text-right font-black">Cash on Delivery</span>
-                   </div>
+                   <CheckoutPaymentOptions payment={payment} total={orderTotal} shipping={shippingCharge} />
 
                    <div className="flex justify-between text-lg font-black text-slate-900 pt-4 border-t border-slate-100 mt-4">
                      <span>Total</span>
