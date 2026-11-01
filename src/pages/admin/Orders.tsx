@@ -20,15 +20,18 @@ import { parseDate, CalendarDate, today, getLocalTimeZone } from '@international
 import type { RangeValue } from 'react-aria-components';
 import { Pagination } from '../../components/ui/Pagination';
 import { OrderPrintModal } from '../../components/admin/OrderPrintModal';
+import { PaymentSummary } from '../../components/PaymentSummary';
+import { remainingBalance, type PaymentRecord } from '../../lib/paymentRules';
 
 interface OrderItem {
   id: string;
   quantity: number;
   price: number;
+  variant_options?: Record<string, string>;
   product: { name?: string; title?: string; images?: string[]; image?: string };
 }
 
-interface Order {
+interface Order extends PaymentRecord {
   id: string;
   status: string;
   total_amount: number;
@@ -42,6 +45,7 @@ interface Order {
   courier_sent_at?: string;
   courier_response?: any;
   fraud_result?: any;
+  order_source?: string;
   profiles?: { email?: string };
   order_items?: OrderItem[];
 }
@@ -607,7 +611,7 @@ export default function AdminOrders() {
         recipient_name: nameLine,
         recipient_phone: cleanPhone.length === 11 ? cleanPhone : '01700000000',
         recipient_address: addressLine,
-        cod_amount: Number(order.total_amount || 0),
+        cod_amount: remainingBalance(order),
         note: ''
       }, config);
 
@@ -701,7 +705,7 @@ export default function AdminOrders() {
         item_type: 2,
         item_quantity: 1,
         item_weight: 0.5,
-        amount_to_collect: Number(order.total_amount || 0)
+        amount_to_collect: remainingBalance(order)
       };
 
       if (resolved.cityId) pathaoPayload.recipient_city = resolved.cityId;
@@ -1063,7 +1067,7 @@ export default function AdminOrders() {
 
   const item = {
     hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+    show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
   };
 
   if (loading) {
@@ -1154,7 +1158,7 @@ export default function AdminOrders() {
             <DateRangePicker 
               aria-label="Filter by date range"
               value={filterDate}
-              onChange={setFilterDate}
+              onChange={setFilterDate as any}
             />
           </div>
           <div className="w-full md:w-64">
@@ -1409,6 +1413,8 @@ export default function AdminOrders() {
 
                     <td className="p-4 align-middle whitespace-nowrap">
                       <div className="font-bold text-primary">৳{order.total_amount?.toFixed(2)}</div>
+                      <div className="text-xs text-payment-muted">অগ্রিম: ৳{Number(order.advance_paid || 0).toFixed(2)}</div>
+                      <div className="text-xs font-semibold text-payment-text">বাকি: ৳{remainingBalance(order).toFixed(2)}</div>
                     </td>
 
                     <td className="p-4 align-middle whitespace-nowrap">
@@ -1926,6 +1932,7 @@ export default function AdminOrders() {
               </div>
               <p className="text-gray-600 mb-1"><span className="text-gray-500 text-sm">Date:</span> {selectedOrder?.created_at && new Date(selectedOrder.created_at).toLocaleString()}</p>
               <p className="text-gray-600"><span className="text-gray-500 text-sm">Total:</span> <span className="font-bold text-primary text-lg">৳{selectedOrder?.total_amount?.toFixed(2)}</span></p>
+              {selectedOrder && <PaymentSummary order={selectedOrder} />}
             </div>
           </div>
 
@@ -2120,7 +2127,7 @@ export default function AdminOrders() {
                   <div key={item.id} className="flex gap-4 p-3 bg-white items-center">
                     <div className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
                       {item.product?.image || item.product?.images?.[0] ? (
-                        <img src={item.product.image || item.product.images[0]} alt={item.product.title || item.product.name} className="w-full h-full object-cover" />
+                        <img src={item.product.image || item.product.images?.[0]} alt={item.product.title || item.product.name} className="w-full h-full object-cover" />
                       ) : null}
                     </div>
                     <div className="flex-1 min-w-0">
