@@ -175,9 +175,10 @@ export async function onRequest(context) {
         if (!store.is_active) throw new Error('দোকানটি বর্তমানে বন্ধ');
         const orderId = String(body.data?.orderId || '');
         if (!orderId) throw new Error('অর্ডার পাওয়া যায়নি');
-        const orders = await rest(cfg, `orders?id=eq.${orderId}&store_id=eq.${store.id}&select=id,store_id,total_amount,advance_required,advance_paid,payment_status,shipping_address&limit=1`);
+        const orders = await rest(cfg, `orders?id=eq.${orderId}&store_id=eq.${store.id}&select=id,checkout_token,store_id,total_amount,advance_required,advance_paid,payment_status,shipping_address&limit=1`);
         const order = orders?.[0];
         if (!order) throw new Error('অর্ডার পাওয়া যায়নি');
+        if (body.data?.token !== order.checkout_token) throw new Error('অর্ডারের অনুমতি নেই');
         if (order.payment_status === 'paid') throw new Error('এই অর্ডারের পেমেন্ট আগেই সম্পন্ন হয়েছে');
         const due = money(Number(order.advance_required || 0) - Number(order.advance_paid || 0));
         if (due <= 0) throw new Error('এই অর্ডারে অনলাইন পেমেন্টের প্রয়োজন নেই');

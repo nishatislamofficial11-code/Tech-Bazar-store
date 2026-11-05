@@ -13,6 +13,10 @@ import { trackInitiateCheckout, trackPurchase, trackAddToCart, saveCachedUserDat
 import { trackTiktokInitiateCheckout, trackTiktokCompletePayment } from '../../lib/ttPixel';
 import { sendTelegramOrderNotification } from '../../lib/telegramApi';
 import { trackEvent } from '../../lib/analytics';
+import { CheckoutPaymentOptions, useCheckoutPayment } from '../CheckoutPaymentOptions';
+import { paymentRequest } from '../../lib/storePaymentApi';
+import { paymentQuote } from '../../lib/paymentRules';
+import { createCheckoutOrder, rememberPayment } from '../../lib/checkoutOrder';
 import { fetchClientIp, checkIsBlocked, trapBlacklistIp } from '../../lib/blacklist';
 import { 
   getDivisions, 
@@ -45,6 +49,7 @@ export function CheckoutPopup({
   const { items, cartTotal, clearCart, removeFromCart, updateQuantity } = useCart();
   const { user } = useAuth();
   const { settings, loading } = useSettings();
+  const payment = useCheckoutPayment();
   const navigate = useNavigate();
   const formId = useId();
 
@@ -694,6 +699,8 @@ export function CheckoutPopup({
 
     try {
       const shortId = Math.random().toString(36).substring(2, 10).toUpperCase();
+      const quote = paymentQuote(payment.method, orderTotal, shippingCharge, payment.config.fixedAdvance);
+      if (quote.required > 0 && !payment.config.configured) throw new Error('এই দোকানে অনলাইন পেমেন্ট এখনো চালু হয়নি।');
       const trackingId = `ORD-${shortId}`;
       const deliveryInfo = [
         `Name: ${fullName}`,
@@ -707,22 +714,7 @@ export function CheckoutPopup({
         activeIp && activeIp !== 'Unknown' ? `[IP:${activeIp}]` : null
       ].filter(Boolean).join('\n');
       
-      const { data: orderParams, error: orderError } = await supabase
-        .from('orders')
-        .insert([{
-          user_id: user?.id || null,
-          total_amount: orderTotal,
-          shipping_address: deliveryInfo,
-          status: 'pending',
-          order_source: localStorage.getItem('order_source') || 'organic'
-        }])
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
       const orderItems = currentItems.map(item => ({
-        order_id: orderParams.id,
         product_id: item.product.id,
         quantity: item.quantity,
         price: getItemPrice(item.product),
@@ -733,11 +725,20 @@ export function CheckoutPopup({
         variant_weight: item.product.weight || item.product.selectedVariant?.weight || null
       }));
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
+      const orderParams = await createCheckoutOrder({
+        total_amount: orderTotal, shipping_charge: shippingCharge, shipping_address: deliveryInfo,
+        delivery_area: deliveryArea, payment_method: payment.method, customer_name: fullName,
+        customer_phone: cleanedPhone, customer_address: address, order_note: orderNote,
+        order_source: localStorage.getItem('order_source') || 'organic',
+      }, orderItems, incompleteOrderId);
+      setIncompleteOrderId(null);
 
-      if (itemsError) throw itemsError;
+      if (orderParams.advance_required > 0) {
+        rememberPayment(orderParams, usingLocalItems ? [] : currentItems);
+        const { redirectUrl } = await paymentRequest<{ redirectUrl: string }>('initiate', { orderId: orderParams.id, token: orderParams.checkout_token });
+        window.location.assign(redirectUrl);
+        return;
+      }
 
       // Send Telegram Order Notification
       sendTelegramOrderNotification({
@@ -783,7 +784,7 @@ export function CheckoutPopup({
         totalAmount: orderTotal,
         items: currentItems.map(item => {
           let itemTitle = item.product.title || item.product.name || 'Product';
-          let variantStr = undefined;
+          let variantStr: string | undefined;
           if (item.product.selectedVariants) {
             variantStr = Object.entries(item.product.selectedVariants).map(([k, v]) => `${k}: ${v}`).join(', ');
           }
@@ -943,14 +944,14 @@ export function CheckoutPopup({
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4, type: 'spring', bounce: 0.3 }}
+                transition={{ duration: 0.4, type: 'spring' as const, bounce: 0.3 }}
                 className="mx-auto max-w-[360px] py-1 text-center"
               >
                 <div className="relative overflow-hidden rounded-[1.75rem] border border-emerald-100 bg-gradient-to-b from-emerald-50/70 via-white to-white p-5 shadow-xl shadow-emerald-500/10">
                   <motion.div 
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    transition={{ type: 'spring', damping: 12, stiffness: 100, delay: 0.1 }}
+                    transition={{ type: 'spring' as const, damping: 12, stiffness: 100, delay: 0.1 }}
                     className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-200"
                   >
                     <CheckCircle size={36} strokeWidth={2.5} />
@@ -1378,24 +1379,7 @@ export function CheckoutPopup({
                     </h3>
                   </div>
 
-                  <div className="bg-white rounded-xl border-2 border-emerald-500/80 p-3.5 sm:p-4 flex items-center justify-between shadow-2xs transition-all">
-                    <div className="flex items-center gap-3">
-                      <div className="w-5 h-5 rounded-full border-2 border-emerald-600 flex items-center justify-center bg-white shrink-0">
-                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs sm:text-sm font-bold text-slate-900">
-                          Cash on Delivery (ক্যাশ অন ডেলিভারি)
-                        </p>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          পণ্য হাতে পেয়ে মূল্য পরিশোধ করবেন
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md shrink-0">
-                      COD
-                    </span>
-                  </div>
+                  <CheckoutPaymentOptions payment={payment} total={orderTotal} shipping={shippingCharge} />
                 </div>
               </form>
             )}

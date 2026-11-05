@@ -81,14 +81,11 @@ export default function AdminUsers() {
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', userId);
+      const { error } = await supabase.rpc('admin_set_user_role', { target_user_id: userId, new_role: newRole });
 
       if (error) throw error;
 
-      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      await fetchUsers();
       toast.success(`User role updated to ${newRole}`);
     } catch (error: any) {
       console.error('Error updating role:', error);
@@ -144,7 +141,7 @@ export default function AdminUsers() {
 
   const item = {
     hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+    show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
   };
 
   if (loading) return <AdminPageSkeleton variant="table" />;

@@ -6,6 +6,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { getCachedData, setCachedData } from '../lib/cache';
 import { SEO } from '../components/SEO';
 import toast from 'react-hot-toast';
+import { useCart } from '../contexts/CartContext';
 
 const CategoryGrid = lazy(() => import('../components/home/CategoryGrid').then(m => ({ default: m.CategoryGrid })));
 const ProductSection = lazy(() => import('../components/home/ProductSection').then(m => ({ default: m.ProductSection })));
@@ -48,6 +49,7 @@ const HomeSectionsFallback = () => (
 
 export default function HomePage() {
   const { settings } = useSettings();
+  const { removeFromCart, updateQuantity } = useCart();
   const [flashSaleProducts, setFlashSaleProducts] = useState<any[]>(() => {
     const cached = getCachedData('flash_sale_cache');
     return Array.isArray(cached) ? cached : [];
@@ -63,8 +65,28 @@ export default function HomePage() {
     const params = new URLSearchParams(window.location.search);
     const outcome = params.get('payment');
     if (!outcome) return;
-    if (outcome === 'success') toast.success('আপনার পেমেন্ট সফল হয়েছে! অর্ডারটি নিশ্চিত করা হয়েছে।');
-    else if (outcome === 'failed') toast.error('পেমেন্ট ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+    const id = params.get('order');
+    if (outcome === 'success' && id) {
+      const pending = localStorage.getItem(`pending_payment:${id}`);
+      if (pending) {
+        void (async () => {
+          try {
+            const record = JSON.parse(pending);
+            const { data, error } = await supabase.rpc('checkout_order_status', { target_order: id, token: record.token });
+            if (error || !data || !['paid', 'partial'].includes(data.payment_status)) throw new Error('Payment not verified');
+            const cart = JSON.parse(localStorage.getItem('shopping_cart') || '[]');
+            for (const purchased of record.items || []) {
+              const item = cart.find((entry: any) => (entry.product.cartItemKey || entry.product.id) === purchased.key);
+              if (!item) continue;
+              if (item.quantity > purchased.quantity) updateQuantity(purchased.key, item.quantity - purchased.quantity);
+              else removeFromCart(purchased.key);
+            }
+            localStorage.removeItem(`pending_payment:${id}`);
+            toast.success('আপনার পেমেন্ট যাচাই হয়েছে!');
+          } catch { toast.error('পেমেন্ট নিশ্চিত করা যায়নি; অর্ডারের অবস্থা দেখুন।'); }
+        })();
+      }
+    } else if (outcome === 'failed') toast.error('পেমেন্ট ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
     else if (outcome === 'cancelled') toast.error('পেমেন্ট বাতিল করা হয়েছে।');
     params.delete('payment');
     params.delete('order');

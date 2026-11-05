@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        setTimeout(() => { void fetchProfile(session.user.id); }, 0);
       } else {
         setLoading(false);
       }
@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        setTimeout(() => { void fetchProfile(session.user.id); }, 0);
       } else {
         setProfile(null);
         setDemoModeActive(false);
@@ -84,20 +84,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setDemoModeActive(effective.role === 'demo');
         }
       } else {
-         console.warn('Could not fetch profile, attempting to recreate it:', error);
-         
-         if (session?.user) {
-           const newProfile = {
-             id: userId,
-             email: session.user.email,
-             full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-             role: 'user'
-           };
-           
-           await supabase.from('profiles').upsert(newProfile);
-           setProfile(newProfile);
-           setDemoModeActive(false);
-         }
+        if (error) throw error;
+        if (session?.user?.id === userId) {
+          const { data: storeId, error: storeError } = await supabase.rpc('current_store_id');
+          if (storeError) throw storeError;
+          const { error: insertError } = await supabase.from('profiles').insert({
+            id: userId, email: session.user.email,
+            full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+            store_id: storeId,
+          });
+          if (insertError) throw insertError;
+          const { data: persisted, error: readError } = await supabase.from('profiles').select('*').eq('id', userId).single();
+          if (readError) throw readError;
+          setProfile(persisted);
+          setDemoModeActive(false);
+        }
       }
     } catch (err) {
       console.error('Error fetching profile:', err);

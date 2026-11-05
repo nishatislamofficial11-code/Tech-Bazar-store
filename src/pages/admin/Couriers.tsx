@@ -16,6 +16,7 @@ import {
   getPathaoZones, getPathaoAreas, calculatePathaoPrice, createPathaoOrder, PathaoConfig 
 } from '../../lib/pathaoApi';
 import { autoResolveBDLocation } from '../../lib/bdLocationMatcher';
+import { remainingBalance } from '../../lib/paymentRules';
 
 export default function AdminCouriers() {
   const { settings, refreshSettings } = useSettings();
@@ -129,7 +130,7 @@ export default function AdminCouriers() {
       for (const item of updates) {
         const { error } = await supabase
           .from('settings')
-          .upsert({ key: item.key, value: item.value }, { onConflict: 'store_id,key' });
+          .upsert({ key: item.key, value: item.value }, { onConflict: 'key' });
         if (error) throw error;
       }
 
@@ -330,7 +331,7 @@ export default function AdminCouriers() {
             recipient_name: nameLine,
             recipient_phone: cleanPhone.length === 11 ? cleanPhone : '01700000000',
             recipient_address: addressLine,
-            cod_amount: Number(order.total_amount || 0),
+            cod_amount: remainingBalance(order),
             note: '',
           },
           config
@@ -419,7 +420,7 @@ export default function AdminCouriers() {
             item_type: 2,
             item_quantity: 1,
             item_weight: 0.5,
-            amount_to_collect: Number(order.total_amount || 0),
+            amount_to_collect: remainingBalance(order),
           };
 
           if (resolved.cityId) pathaoPayload.recipient_city = resolved.cityId;

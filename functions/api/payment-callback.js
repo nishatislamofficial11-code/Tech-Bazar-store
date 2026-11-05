@@ -19,9 +19,9 @@ async function readParams(request) {
   return params;
 }
 
-function redirectTo(storeSlug, orderId, outcome) {
+function redirectTo(requestUrl, storeSlug, orderId, outcome) {
   const qs = new URLSearchParams({ store: storeSlug, order: orderId, payment: outcome });
-  return Response.redirect(`/?${qs.toString()}`, 303);
+  return Response.redirect(new URL(`/?${qs.toString()}`, requestUrl).toString(), 303);
 }
 
 async function handle(context) {
@@ -61,17 +61,17 @@ async function handle(context) {
   }
   const storeSlug = order.stores?.slug || '';
 
-  if (status === 'cancelled') return redirectTo(storeSlug, orderId, 'cancelled');
-  if (status === 'failed') return redirectTo(storeSlug, orderId, 'failed');
+  if (status === 'cancelled') return redirectTo(context.request.url, storeSlug, orderId, 'cancelled');
+  if (status === 'failed') return redirectTo(context.request.url, storeSlug, orderId, 'failed');
 
   // Idempotency: settle only once
   if (order.payment_status === 'paid' || order.payment_status === 'partial') {
-    return redirectTo(storeSlug, orderId, 'success');
+    return redirectTo(context.request.url, storeSlug, orderId, 'success');
   }
 
   const gwRows = await rest(`store_payment_gateways?store_id=eq.${order.store_id}&gateway=eq.${gateway}&is_active=eq.true&select=credentials&limit=1`);
   const credentials = gwRows?.[0]?.credentials;
-  if (!credentials) return redirectTo(storeSlug, orderId, 'failed');
+  if (!credentials) return redirectTo(context.request.url, storeSlug, orderId, 'failed');
 
   const envRows = await rest(`settings?store_id=eq.${order.store_id}&key=eq.payment_environment&select=value&limit=1`);
   const config = {
@@ -87,24 +87,16 @@ async function handle(context) {
       { transaction: order.id, amount: expected, currency: 'BDT', store: order.store_id },
       { transaction: verified.transaction, amount: verified.amount, currency: verified.currency, store: order.store_id, successful: verified.successful },
     );
-    if (!ok) return redirectTo(storeSlug, orderId, 'failed');
+    if (!ok) return redirectTo(context.request.url, storeSlug, orderId, 'failed');
 
-    const newPaid = money(Number(order.advance_paid || 0) + verified.amount);
-    const full = newPaid >= money(Number(order.total_amount || 0));
-    await rest(`orders?id=eq.${order.id}&payment_status=eq.unpaid`, {
-      method: 'PATCH',
-      headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({
-        advance_paid: newPaid,
-        payment_status: full ? 'paid' : 'partial',
-        payment_gateway: gateway,
-        payment_transaction_id: verified.gatewayTransactionId,
-        payment_paid_at: new Date().toISOString(),
-      }),
+    const settled = await rest('rpc/settle_verified_payment', {
+      method: 'POST', body: JSON.stringify({ target_order: order.id, verified_amount: verified.amount,
+        gateway_name: gateway, gateway_transaction: verified.gatewayTransactionId }),
     });
-    return redirectTo(storeSlug, orderId, 'success');
+    if (settled !== true) return redirectTo(context.request.url, storeSlug, orderId, 'failed');
+    return redirectTo(context.request.url, storeSlug, orderId, 'success');
   } catch {
-    return redirectTo(storeSlug, orderId, 'failed');
+    return redirectTo(context.request.url, storeSlug, orderId, 'failed');
   }
 }
 

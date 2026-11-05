@@ -14,7 +14,7 @@ export const defaultPaymentSettings: StorePaymentSettings = {
 export async function paymentRequest<T>(action: string, data?: unknown): Promise<T> {
   const { data: { session } } = await rawSupabase.auth.getSession();
   const store = typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('store') || localStorage.getItem('current_store_slug') || '';
-  const response = await fetch('/api/public/store-payments', {
+  const response = await fetch('/api/store-payments', {
     method: 'POST', headers: { 'Content-Type': 'application/json', ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
     body: JSON.stringify({ action, store, data }),
   });

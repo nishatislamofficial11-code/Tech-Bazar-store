@@ -26,8 +26,8 @@ export default function TrackOrder() {
   };
 
   useEffect(() => {
-    if (searchParams.get('id')) {
-      const id = searchParams.get('id')!;
+    const id = searchParams.get('id');
+    if (id) {
       setOrderId(id);
       trackOrderById(id);
     }
@@ -42,59 +42,8 @@ export default function TrackOrder() {
 
     try {
       const cleanId = id.trim();
-      const tid = cleanId.replace(/^\[?TID:?/i, '').replace(/\]$/, '');
-      let orderData: any = null;
-
-      // 1. Try public RPC if available
-      try {
-        const { data: rpcData, error: rpcError } = await supabase.rpc('track_order_public', {
-          tracking_code: cleanId,
-        });
-        if (!rpcError && rpcData) {
-          orderData = rpcData;
-        }
-      } catch (_) {
-        // Fallback if RPC is not present
-      }
-
-      // 2. Search orders by shipping_address containing tracking ID
-      if (!orderData && tid) {
-        const { data: textData, error: textErr } = await supabase
-          .from('orders')
-          .select('*, order_items(*, product:products(*))')
-          .textSearch('shipping_address', tid)
-          .limit(1);
-
-        if (!textErr && textData && textData.length > 0) {
-          orderData = textData[0];
-        }
-      }
-
-      // 3. Search by UUID if format matches
-      if (!orderData && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId)) {
-        const { data: uuidData, error: uuidErr } = await supabase
-          .from('orders')
-          .select('*, order_items(*, product:products(*))')
-          .eq('id', cleanId)
-          .maybeSingle();
-
-        if (!uuidErr && uuidData) {
-          orderData = uuidData;
-        }
-      }
-
-      // 4. Search by courier tracking code or consignment id
-      if (!orderData) {
-        const { data: courierData, error: courierErr } = await supabase
-          .from('orders')
-          .select('*, order_items(*, product:products(*))')
-          .or(`courier_tracking_code.eq.${cleanId},courier_consignment_id.eq.${cleanId}`)
-          .limit(1);
-
-        if (!courierErr && courierData && courierData.length > 0) {
-          orderData = courierData[0];
-        }
-      }
+      const { data: orderData, error: rpcError } = await supabase.rpc('track_order_public', { tracking_code: cleanId });
+      if (rpcError) throw rpcError;
 
       if (!orderData) {
         setError('অর্ডারটি খুঁজে পাওয়া যায়নি। অনুগ্রহ করে সঠিক ট্র্যাকিং আইডি দিন।');
@@ -155,7 +104,7 @@ export default function TrackOrder() {
 
     const items = (order.order_items || []).map((item: any) => {
       let title = item.product?.title || item.product?.name || item.products?.title || 'Product';
-      let variantStr = undefined;
+      let variantStr: string | undefined;
       if (item.variant_options && typeof item.variant_options === 'object') {
         variantStr = Object.entries(item.variant_options).map(([k, v]) => `${k}: ${v}`).join(', ');
       }

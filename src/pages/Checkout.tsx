@@ -25,6 +25,7 @@ import {
 import { fetchClientIp, checkIsBlocked, trapBlacklistIp } from '../lib/blacklist';
 import { trackEvent } from '../lib/analytics';
 import { CheckoutPaymentOptions, useCheckoutPayment } from '../components/CheckoutPaymentOptions';
+import { createCheckoutOrder, rememberPayment } from '../lib/checkoutOrder';
 import { paymentRequest } from '../lib/storePaymentApi';
 import { paymentQuote } from '../lib/paymentRules';
 
@@ -483,7 +484,7 @@ export default function Checkout() {
 
     try {
       const quote = paymentQuote(payment.method, orderTotal, shippingCharge, payment.config.fixedAdvance);
-      if (payment.method !== 'cod' && !payment.config.configured) throw new Error('এই দোকানে অনলাইন পেমেন্ট এখনো চালু হয়নি।');
+      if (quote.required > 0 && !payment.config.configured) throw new Error('এই দোকানে অনলাইন পেমেন্ট এখনো চালু হয়নি।');
       // 1. Create Order
       const shortId = Math.random().toString(36).substring(2, 10).toUpperCase();
       const trackingId = `ORD-${shortId}`;
@@ -499,28 +500,7 @@ export default function Checkout() {
         activeIp && activeIp !== 'Unknown' ? `[IP:${activeIp}]` : null
       ].filter(Boolean).join('\n');
       
-      const { data: orderParams, error: orderError } = await supabase
-        .from('orders')
-        .insert([{
-          user_id: user?.id || null,
-          total_amount: orderTotal,
-          shipping_address: deliveryInfo,
-          status: 'pending',
-          order_source: localStorage.getItem('order_source') || 'organic',
-          payment_method: payment.method,
-          advance_required: quote.required,
-          advance_paid: 0,
-          payment_status: 'unpaid',
-          shipping_charge: shippingCharge
-        }])
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // 2. Create Order Items
       const orderItems = items.map(item => ({
-        order_id: orderParams.id,
         product_id: item.product.id,
         quantity: item.quantity,
         price: getItemPrice(item.product),
@@ -531,33 +511,20 @@ export default function Checkout() {
         variant_weight: item.product.weight || item.product.selectedVariant?.weight || null
       }));
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
+      const orderParams = await createCheckoutOrder({
+        total_amount: orderTotal, shipping_charge: shippingCharge, shipping_address: deliveryInfo,
+        delivery_area: deliveryArea, payment_method: payment.method, customer_name: fullName,
+        customer_phone: cleanedPhone, customer_address: address, order_note: orderNote,
+        order_source: localStorage.getItem('order_source') || 'organic',
+      }, orderItems, incompleteOrderId);
+      setIncompleteOrderId(null);
 
       // Online payment: send the customer to the gateway page
-      if (payment.method !== 'cod') {
-        const { redirectUrl } = await paymentRequest<{ redirectUrl: string }>('initiate', { orderId: orderParams.id });
+      if (orderParams.advance_required > 0) {
+        rememberPayment(orderParams, items);
+        const { redirectUrl } = await paymentRequest<{ redirectUrl: string }>('initiate', { orderId: orderParams.id, token: orderParams.checkout_token });
         window.location.href = redirectUrl;
         return;
-      }
-
-      // Decrement inventory stock for ordered items
-      for (const item of items) {
-        if (item.product?.id) {
-          const currentStock = Number(item.product.stock ?? 100);
-          const newStock = Math.max(0, currentStock - item.quantity);
-          try {
-            await supabase
-              .from('products')
-              .update({ stock: newStock })
-              .eq('id', item.product.id);
-          } catch (stockErr) {
-            console.warn('Could not decrement product stock:', stockErr);
-          }
-        }
       }
 
       // 3. Send Telegram Notification
