@@ -25,6 +25,16 @@ export default function SignIn() {
 
     if (error) {
       toast.error(error.message);
+      setLoading(false);
+      return;
+    }
+
+    const slug = new URLSearchParams(window.location.search).get('store')
+      || localStorage.getItem('current_store_slug');
+    const { data: allowed, error: checkError } = await supabase.rpc('can_sign_in_to_store', { p_slug: slug });
+    if (checkError || allowed !== true) {
+      await supabase.auth.signOut();
+      toast.error('এই স্টোরে আপনার কোনো অ্যাকাউন্ট নেই। অনুগ্রহ করে সাইন আপ করুন।');
     } else {
       toast.success('Successfully signed in!');
       navigate('/');
