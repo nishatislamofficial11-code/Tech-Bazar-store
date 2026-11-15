@@ -3,9 +3,14 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
-import { Menu } from 'lucide-react';
+import { Menu, ExternalLink } from 'lucide-react';
 import { AdminSidebar } from './AdminSidebar';
 import toast from 'react-hot-toast';
+
+function storefrontLink(search: string, storedSlug: string | null): string {
+  const slug = new URLSearchParams(search).get('store') || storedSlug;
+  return slug ? `/?${new URLSearchParams({ store: slug }).toString()}` : '/';
+}
 
 export default function AdminLayout() {
   const { profile, loading, signOut } = useAuth();
@@ -13,6 +18,7 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const websiteLink = storefrontLink(location.search, localStorage.getItem('current_store_slug'));
   const [isCollapsed, setIsCollapsed] = useState(() => {
     return localStorage.getItem('admin_sidebar_collapsed') === 'true';
   });
@@ -101,15 +107,24 @@ export default function AdminLayout() {
       {/* ── Main Content Area ── */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden bg-white">
 
-        {/* Mobile Header */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4 lg:hidden">
+        {/* Admin Header */}
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4 lg:justify-end">
           <button
             onClick={() => setIsSidebarOpen(true)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors shrink-0"
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors shrink-0 lg:hidden"
           >
             <Menu className="h-6 w-6" strokeWidth={2} />
           </button>
-          {/* Title removed per user request for cleaner look */}
+          <a
+            href={websiteLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open your store website"
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-primary px-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"
+          >
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            Visit Website
+          </a>
         </header>
 
         {/* Main Scrollable Content */}
