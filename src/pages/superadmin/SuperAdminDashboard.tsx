@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
-import { Store, Plus, Copy, LogOut, RefreshCw, CheckCircle2, XCircle, Settings2, Trash2, Search } from 'lucide-react';
+import { Store, Copy, LogOut, RefreshCw, CheckCircle2, XCircle, Settings2, Trash2, Search } from 'lucide-react';
 import { filterStores } from '../../lib/storeSearch';
-import { PlanBadge, PlanActions, PlatformSettingsCard, LandingSettingsCard, SmsSettingsCard, type PlanInfo } from '../../components/superadmin/PlatformControls';
+import { PlanBadge, PlanActions, PlatformSettingsCard, LandingSettingsCard, SmsSettingsCard, SuperCreateStoreForm, type PlanInfo } from '../../components/superadmin/PlatformControls';
 
 interface StoreRow extends PlanInfo {
   id: string;
@@ -15,12 +15,6 @@ interface StoreRow extends PlanInfo {
   created_at: string;
 }
 
-interface CreatedCredentials {
-  storeName: string;
-  slug: string;
-  email: string;
-  password: string;
-}
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
@@ -31,12 +25,6 @@ export default function SuperAdminDashboard() {
   const [search, setSearch] = useState('');
   const filteredStores: StoreRow[] = filterStores<StoreRow>(stores, search);
 
-  const [storeName, setStoreName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [created, setCreated] = useState<CreatedCredentials | null>(null);
 
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -145,53 +133,7 @@ export default function SuperAdminDashboard() {
     })();
   }, [navigate, loadStores]);
 
-  const handleNameChange = (value: string) => {
-    setStoreName(value);
-    setSlug(
-      value
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/[\s_]+/g, '-')
-        .replace(/-+/g, '-')
-    );
-  };
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (creating) return;
-    if (!slug) {
-      toast.error('স্টোরের নামে ইংরেজি অক্ষর রাখুন যাতে লিংক বানানো যায়।');
-      return;
-    }
-    setCreating(true);
-    try {
-      const { error } = await supabase.rpc('create_store_with_admin', {
-        p_store_name: storeName.trim(),
-        p_slug: slug,
-        p_admin_email: adminEmail.trim(),
-        p_admin_password: adminPassword,
-      });
-      if (error) throw error;
-
-      setCreated({
-        storeName: storeName.trim(),
-        slug,
-        email: adminEmail.trim(),
-        password: adminPassword,
-      });
-      setStoreName('');
-      setSlug('');
-      setAdminEmail('');
-      setAdminPassword('');
-      toast.success('নতুন স্টোর তৈরি হয়েছে!');
-      await loadStores();
-    } catch (err: any) {
-      toast.error(err?.message || 'স্টোর তৈরি ব্যর্থ হয়েছে।');
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const handleToggle = async (store: StoreRow) => {
     setTogglingId(store.id);
@@ -212,16 +154,6 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const copyCredentials = () => {
-    if (!created) return;
-    const storeUrl = `${window.location.origin}/?store=${created.slug}`;
-    const loginUrl = `${window.location.origin}/merchant/login`;
-    const text = `🛍️ আপনার নতুন স্টোর প্রস্তুত!\n\nস্টোরের নাম: ${created.storeName}\nস্টোর লিংক: ${storeUrl}\n\nলগইন লিংক: ${loginUrl}\nইমেইল: ${created.email}\nপাসওয়ার্ড: ${created.password}`;
-    navigator.clipboard
-      .writeText(text)
-      .then(() => toast.success('কপি হয়েছে! এখন কাস্টমারকে পাঠিয়ে দিন।'))
-      .catch(() => toast.error('কপি করা যায়নি, নিজে লিখে নিন।'));
-  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -269,82 +201,7 @@ export default function SuperAdminDashboard() {
         <PlatformSettingsCard />
         <SmsSettingsCard />
         <LandingSettingsCard />
-        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-          <h2 className="text-base font-bold flex items-center gap-2 mb-4">
-            <Plus className="h-5 w-5 text-emerald-400" />
-            নতুন স্টোর তৈরি করুন
-          </h2>
-          <form onSubmit={handleCreate} className="space-y-3.5">
-            <div>
-              <label className="block text-sm text-slate-300 mb-1.5">স্টোরের নাম</label>
-              <input
-                type="text"
-                required
-                value={storeName}
-                onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="যেমন: Rahman Electronics"
-                className="w-full rounded-xl bg-slate-800 border border-slate-700 px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-              />
-              {slug && (
-                <p className="text-xs text-emerald-400 mt-1.5">
-                  স্টোর লিংক হবে: <span className="font-mono">{window.location.origin}/?store={slug}</span>
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm text-slate-300 mb-1.5">স্টোর মালিকের ইমেইল</label>
-              <input
-                type="email"
-                required
-                value={adminEmail}
-                onChange={(e) => setAdminEmail(e.target.value)}
-                placeholder="owner@example.com"
-                className="w-full rounded-xl bg-slate-800 border border-slate-700 px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-300 mb-1.5">লগইন পাসওয়ার্ড</label>
-              <input
-                type="text"
-                required
-                minLength={6}
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                placeholder="কমপক্ষে ৬ অক্ষর"
-                className="w-full rounded-xl bg-slate-800 border border-slate-700 px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={creating}
-              className="w-full rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold py-3 transition-colors"
-            >
-              {creating ? 'তৈরি হচ্ছে...' : 'স্টোর তৈরি করুন'}
-            </button>
-          </form>
-
-          {created && (
-            <div className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4">
-              <p className="text-sm font-bold text-emerald-300 mb-2">
-                ✅ স্টোর তৈরি হয়েছে! এই তথ্যগুলো কাস্টমারকে পাঠিয়ে দিন:
-              </p>
-              <div className="text-sm text-slate-200 space-y-1 font-mono break-all">
-                <p>স্টোর: {created.storeName}</p>
-                <p>স্টোর লিংক: {window.location.origin}/?store={created.slug}</p>
-                <p>লগইন: {window.location.origin}/merchant/login</p>
-                <p>ইমেইল: {created.email}</p>
-                <p>পাসওয়ার্ড: {created.password}</p>
-              </div>
-              <button
-                onClick={copyCredentials}
-                className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-bold px-4 py-2.5 transition-colors"
-              >
-                <Copy className="h-4 w-4" />
-                সব কপি করুন
-              </button>
-            </div>
-          )}
-        </section>
+        <SuperCreateStoreForm onCreated={loadStores} />
 
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
