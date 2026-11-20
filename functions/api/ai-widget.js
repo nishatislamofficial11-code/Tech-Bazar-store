@@ -36,7 +36,7 @@ export async function onRequest(context) {
 
     if (body.action === 'history') {
       if (!conv) return json({ ok: true, messages: [], status: 'ai' });
-      const msgs = await rest(cfg, `ai_messages?conversation_id=eq.${conv.id}&role=neq.system&select=id,role,content,agent_name,created_at&order=created_at.asc&limit=100`);
+      const msgs = await rest(cfg, `ai_messages?conversation_id=eq.${conv.id}&role=neq.system&select=id,role,content,agent_name,attachments,created_at&order=created_at.asc&limit=100`);
       return json({ ok: true, messages: msgs || [], status: conv.status });
     }
 
@@ -77,7 +77,7 @@ export async function onRequest(context) {
     }
 
     const result = await handleCustomerMessage(cfg, store, conv, message);
-    return json({ ok: true, reply: result.reply, status: result.status });
+    return json({ ok: true, reply: result.reply, status: result.status, attachments: result.attachments || [] });
   } catch (err) {
     return json({ ok: false, error: 'এখন উত্তর দেওয়া যাচ্ছে না, একটু পরে চেষ্টা করুন' }, 500);
   }

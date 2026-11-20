@@ -4,6 +4,7 @@ import { ArrowLeft, Bot, CheckCircle2, Hand, MessageSquare, Search, Send, UserRo
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { aiChatApi, AiConversation, AiMessage, CHANNEL_LABEL, CHANNEL_STYLE } from '../../../lib/aiApi';
+import { ProductCards } from '../../../components/layout/FloatingWhatsApp';
 
 type Tab = 'all' | 'needs_human' | 'mine' | 'ai' | 'resolved';
 const TABS: { id: Tab; label: string }[] = [
@@ -47,7 +48,7 @@ export default function AiInbox() {
   }, []);
 
   const loadMessages = useCallback(async (id: string) => {
-    const { data } = await supabase.from('ai_messages').select('id, role, content, agent_name, created_at')
+    const { data } = await supabase.from('ai_messages').select('id, role, content, agent_name, attachments, created_at')
       .eq('conversation_id', id).order('created_at', { ascending: true }).limit(500);
     setMessages((data || []) as AiMessage[]);
   }, []);
@@ -217,6 +218,7 @@ export default function AiInbox() {
                           : m.role === 'ai' ? 'bg-primary/10 text-gray-900 rounded-br-md'
                             : 'bg-primary text-white rounded-br-md'}`}>
                         {m.content}
+                        <ProductCards cards={m.attachments} />
                         <p className={`mt-1 text-[10px] ${m.role === 'agent' ? 'text-white/70' : 'text-gray-400'}`}>
                           {m.role === 'ai' ? 'AI · ' : m.role === 'agent' ? `${m.agent_name || 'Agent'} · ` : ''}{timeAgo(m.created_at)}
                         </p>

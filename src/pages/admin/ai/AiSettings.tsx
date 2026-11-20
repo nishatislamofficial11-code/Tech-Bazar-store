@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Bot, Plus, RotateCcw, Send, Trash2, Sparkles } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import { aiChatApi } from '../../../lib/aiApi';
+import { aiChatApi, ProductCard } from '../../../lib/aiApi';
+import { ProductCards } from '../../../components/layout/FloatingWhatsApp';
 import { useSettings } from '../../../contexts/SettingsContext';
 
 function WebsiteChatCard() {
@@ -82,7 +83,7 @@ function RuleList({ title, hint, rules, onChange }: { title: string; hint: strin
 }
 
 function TestChat({ ready }: { ready: boolean }) {
-  const [log, setLog] = useState<{ role: 'me' | 'ai' | 'note'; text: string }[]>([]);
+  const [log, setLog] = useState<{ role: 'me' | 'ai' | 'note'; text: string; cards?: ProductCard[] }[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
@@ -95,10 +96,10 @@ function TestChat({ ready }: { ready: boolean }) {
     setLog((l) => [...l, { role: 'me', text: msg }]);
     setBusy(true);
     try {
-      const out = await aiChatApi<{ reply: string | null; status: string }>({ action: 'test', message: msg });
+      const out = await aiChatApi<{ reply: string | null; status: string; attachments?: ProductCard[] }>({ action: 'test', message: msg });
       setLog((l) => [
         ...l,
-        ...(out.reply ? [{ role: 'ai' as const, text: out.reply }] : []),
+        ...(out.reply ? [{ role: 'ai' as const, text: out.reply, cards: out.attachments }] : []),
         ...(out.status === 'needs_human' ? [{ role: 'note' as const, text: 'চ্যাটটা Human Need-এ গেছে। AI Inbox-এ গিয়ে Join করে উত্তর দিন, বা "নতুন করে" চাপুন।' }] : []),
         ...(!out.reply && out.status === 'ai' ? [{ role: 'note' as const, text: 'AI উত্তর দেয়নি। উপরে AI চালু আছে কিনা দেখুন।' }] : []),
       ]);
@@ -123,8 +124,11 @@ function TestChat({ ready }: { ready: boolean }) {
         {log.length === 0 && <p className="text-xs text-gray-400 text-center pt-24">যেমন লিখুন: "এই প্রোডাক্টের দাম কত?"</p>}
         {log.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'me' ? 'justify-start' : m.role === 'ai' ? 'justify-end' : 'justify-center'}`}>
-            <p className={`max-w-[85%] text-sm rounded-2xl px-3 py-2 whitespace-pre-wrap ${
-              m.role === 'me' ? 'bg-white border border-gray-200' : m.role === 'ai' ? 'bg-primary text-white' : 'bg-amber-50 text-amber-800 text-xs'}`}>{m.text}</p>
+            <div className="max-w-[85%] min-w-0">
+              <p className={`text-sm rounded-2xl px-3 py-2 whitespace-pre-wrap ${
+                m.role === 'me' ? 'bg-white border border-gray-200' : m.role === 'ai' ? 'bg-primary text-white' : 'bg-amber-50 text-amber-800 text-xs'}`}>{m.text}</p>
+              <ProductCards cards={m.cards} />
+            </div>
           </div>
         ))}
         {busy && <p className="text-xs text-gray-400 text-right">AI লিখছে…</p>}

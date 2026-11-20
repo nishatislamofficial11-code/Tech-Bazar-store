@@ -35,8 +35,9 @@ const REPLY_SCHEMA = {
     handoff_reason: { type: 'string', description: 'Short reason for the agent, in Bangla (empty if needs_human is false)' },
     sentiment: { type: 'string', enum: ['positive', 'neutral', 'negative'] },
     summary: { type: 'string', description: 'One-line Bangla summary of the whole conversation so far, for the shop staff' },
+    show_products: { type: 'array', items: { type: 'string' }, description: 'Codes like P3 of products to show as photo cards (max 4), or empty' },
   },
-  required: ['reply', 'needs_human', 'handoff_reason', 'sentiment', 'summary'],
+  required: ['reply', 'needs_human', 'handoff_reason', 'sentiment', 'summary', 'show_products'],
   additionalProperties: false,
 };
 
@@ -93,7 +94,7 @@ function pickProducts(products, queryText) {
 
 async function shopContext(cfg, store, ai, queryText = '') {
   const [allProducts, knowledge, settings, categories] = await Promise.all([
-    rest(cfg, `products?store_id=eq.${store.id}&select=title,price,original_price,stock,variants,is_delivery_free,category_id&order=created_at.desc&limit=500`),
+    rest(cfg, `products?store_id=eq.${store.id}&select=id,slug,image,title,price,original_price,stock,variants,is_delivery_free,category_id&order=created_at.desc&limit=500`),
     rest(cfg, `ai_knowledge?store_id=eq.${store.id}&is_active=eq.true&select=category,title,content&order=category.asc,title.asc&limit=200`),
     rest(cfg, `settings?store_id=eq.${store.id}&key=in.(site_title,delivery_charge_type,flat_delivery_charge,delivery_charge_inside_dhaka,delivery_charge_outside_dhaka,whatsapp_number)&select=key,value`),
     rest(cfg, `categories?store_id=eq.${store.id}&select=id,name&limit=100`).catch(() => []),
@@ -110,15 +111,15 @@ async function shopContext(cfg, store, ai, queryText = '') {
     ? `সব জায়গায় ${taka(s.flat_delivery_charge)}`
     : `ঢাকার ভিতরে ${taka(s.delivery_charge_inside_dhaka)}, ঢাকার বাইরে ${taka(s.delivery_charge_outside_dhaka)}`;
 
-  const productLines = (products || []).map((p) => {
+  const productLines = (products || []).map((p, i) => {
     const stock = p.stock == null ? '' : Number(p.stock) > 0 ? ` | স্টক: ${p.stock}` : ' | স্টক নেই';
     const old = Number(p.original_price) > Number(p.price) ? ` (আগের দাম ${taka(p.original_price)})` : '';
     const vars = variantText(p.variants);
-    return `- ${p.title}: ${taka(p.price)}${old}${stock}${vars ? ` | ${vars}` : ''}${p.is_delivery_free ? ' | ফ্রি ডেলিভারি' : ''}`;
+    return `- [P${i + 1}] ${p.title}: ${taka(p.price)}${old}${stock}${vars ? ` | ${vars}` : ''}${p.is_delivery_free ? ' | ফ্রি ডেলিভারি' : ''}`;
   });
   const kbLines = (knowledge || []).map((k) => `### ${k.category} — ${k.title}\n${k.content}`);
 
-  return [
+  const text = [
     `দোকানের নাম: ${shopName}`,
     `ডেলিভারি চার্জ: ${delivery}`,
     s.whatsapp_number ? `WhatsApp: ${s.whatsapp_number}` : null,
@@ -136,6 +137,7 @@ async function shopContext(cfg, store, ai, queryText = '') {
     ...(ai.always_rules || []).map((r) => `- সবসময়: ${r}`),
     ...(ai.never_rules || []).map((r) => `- কখনো না: ${r}`),
   ].filter((l) => l !== null).join('\n');
+  return { text, products: products || [] };
 }
 
 function systemPrompt(ai) {
@@ -146,6 +148,7 @@ function systemPrompt(ai) {
 - কাস্টমার যে ভাষায় লেখে (বাংলা, বাংলিশ বা ইংরেজি) সেভাবে বুঝবে; দোকানদারের নিয়মে অন্য কিছু না বললে বাংলায় উত্তর দেবে।
 - উত্তর ছোট, ভদ্র আর মানুষের মতো রাখো (সাধারণত ১-৩ বাক্য)। মেসেঞ্জারের মতো সাধারণ লেখা, কোনো markdown নয়।
 - কেউ কিনতে চাইলে নাম, মোবাইল নম্বর, পুরো ঠিকানা আর কোন প্রোডাক্ট (সাইজ/রং/পরিমাণ) নিশ্চিত করে নাও।
+- কাস্টমার ছবি বা লিংক চাইলে, বা তুমি কোনো প্রোডাক্টের কথা বললে, show_products-এ সেই প্রোডাক্টের কোড দাও (যেমন ["P3"], সর্বোচ্চ ৪টা)। চ্যাটে ছবি, দাম আর কেনার লিংকসহ কার্ড দেখাবে। "ছবি পাঠাতে পারি না" বলবে না।
 
 কঠোর নিয়ম:
 - দাম, স্টক, ছাড় বা নীতি কখনো বানিয়ে বলবে না। তথ্যে না থাকলে বলবে না, needs_human=true করবে।
@@ -161,7 +164,7 @@ needs_human=true করবে যখন:
 needs_human=true হলে reply-তে কাস্টমারকে ভদ্রভাবে জানাও যে এজেন্ট শীঘ্রই উত্তর দেবেন।
 
 উত্তর শুধু একটা JSON অবজেক্ট হবে, এই ঘরগুলো সহ:
-{"reply": "কাস্টমারকে পাঠানোর মেসেজ", "needs_human": true/false, "handoff_reason": "এজেন্টের জন্য ছোট কারণ (না লাগলে খালি)", "sentiment": "positive" | "neutral" | "negative", "summary": "পুরো কথোপকথনের এক লাইনের সারাংশ"}`;
+{"reply": "কাস্টমারকে পাঠানোর মেসেজ", "needs_human": true/false, "handoff_reason": "এজেন্টের জন্য ছোট কারণ (না লাগলে খালি)", "sentiment": "positive" | "neutral" | "negative", "summary": "পুরো কথোপকথনের এক লাইনের সারাংশ", "show_products": ["P1"]}`;
 }
 
 function toApiMessages(history) {
@@ -280,6 +283,21 @@ async function askAi(cfg, platform, ai, context, history) {
   }
 }
 
+// Turns the AI's product codes (P1, P2…) into photo cards: picture, name, price and the product page
+function productCards(codes, products) {
+  if (!Array.isArray(codes)) return [];
+  const seen = new Set();
+  const cards = [];
+  for (const code of codes.slice(0, 4)) {
+    const n = Number(String(code).replace(/\D/g, ''));
+    const p = products[n - 1];
+    if (!p || seen.has(n)) continue;
+    seen.add(n);
+    cards.push({ type: 'product', title: String(p.title || '').slice(0, 120), price: Number(p.price) || 0, image: p.image || null, path: `/product/${p.slug || p.id}` });
+  }
+  return cards;
+}
+
 async function addMessage(cfg, conv, role, content, extra = {}) {
   await rest(cfg, 'ai_messages', {
     method: 'POST',
@@ -355,10 +373,12 @@ export async function handleCustomerMessage(cfg, store, conv, text) {
 
   const history = await rest(cfg, `ai_messages?conversation_id=eq.${conv.id}&select=role,content&order=created_at.desc&limit=${HISTORY_LIMIT}`);
   let out;
+  let shop = { products: [] };
   try {
     const recent = (history || []).reverse();
     const queryText = recent.filter((m) => m.role === 'customer').slice(-3).map((m) => m.content).join(' ');
-    out = await askAi(cfg, platform, ai, await shopContext(cfg, store, ai, queryText), recent);
+    shop = await shopContext(cfg, store, ai, queryText);
+    out = await askAi(cfg, platform, ai, shop.text, recent);
   } catch (err) {
     await refundReply(cfg, store.id);
     return handOff(`${TECH}AI উত্তর দিতে পারেনি (${String(err?.message || err).slice(0, 220)})`, BUSY_REPLY);
@@ -375,9 +395,10 @@ export async function handleCustomerMessage(cfg, store, conv, text) {
     await updateConversation(cfg, conv, { sentiment, summary });
     return handOff(String(out.handoff_reason || 'AI নিশ্চিত না').slice(0, 300), ai.handoff_message?.trim() || reply);
   }
-  await addMessage(cfg, conv, 'ai', out.reply.trim());
+  const attachments = productCards(out.show_products, shop.products);
+  await addMessage(cfg, conv, 'ai', out.reply.trim(), attachments.length ? { attachments } : {});
   await updateConversation(cfg, conv, { ...base, status: 'ai', handoff_reason: null, unread: 0, sentiment, summary, last_message: out.reply.trim().slice(0, 200) });
-  return { reply: out.reply.trim(), status: 'ai' };
+  return { reply: out.reply.trim(), status: 'ai', attachments };
 }
 
 export async function addAgentMessage(cfg, conv, agent, text) {
