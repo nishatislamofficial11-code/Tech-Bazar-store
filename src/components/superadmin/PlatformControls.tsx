@@ -281,3 +281,101 @@ export function SmsSettingsCard() {
     </section>
   );
 }
+
+// Create a store from the super admin: same details as the public sign-up, without SMS/email checks
+const BUSINESS_TYPES = ['পোশাক ও ফ্যাশন', 'ইলেকট্রনিক্স ও গ্যাজেট', 'কসমেটিকস ও বিউটি', 'খাবার ও গ্রোসারি', 'ঘর ও ফার্নিচার', 'বই ও স্টেশনারি', 'অন্যান্য'];
+const SLUG_OK = /^[a-z0-9][a-z0-9-]{2,39}$/;
+const PHONE_OK = /^01[3-9]\d{8}$/;
+const toSlug = (v: string) => v.toLowerCase().normalize('NFKD').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+
+export function SuperCreateStoreForm({ onCreated }: { onCreated: () => void }) {
+  const empty = { ownerName: '', phone: '', email: '', password: '', storeName: '', slug: '', businessType: '', plan: 'trial' };
+  const [f, setF] = useState(empty);
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [slugFree, setSlugFree] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<{ storeName: string; slug: string; email: string; password: string } | null>(null);
+  const set = (k: keyof typeof empty, v: string) => setF((p) => ({ ...p, [k]: v }));
+
+  useEffect(() => { if (!slugTouched) setF((p) => ({ ...p, slug: toSlug(p.storeName) })); }, [f.storeName, slugTouched]);
+  useEffect(() => {
+    setSlugFree(null);
+    if (!SLUG_OK.test(f.slug)) return;
+    const t = setTimeout(() => {
+      supabase.rpc('store_slug_available', { p_slug: f.slug }).then(({ data }) => setSlugFree(data === true));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [f.slug]);
+
+  const phone = f.phone.replace(/\D/g, '').slice(-11);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (f.ownerName.trim().length < 2) return toast.error('মালিকের নাম দিন');
+    if (!PHONE_OK.test(phone)) return toast.error('সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)');
+    if (f.password.length < 8) return toast.error('পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের দিন');
+    if (f.storeName.trim().length < 2) return toast.error('দোকানের নাম দিন');
+    if (!SLUG_OK.test(f.slug)) return toast.error('দোকানের লিংকে শুধু ইংরেজি ছোট অক্ষর, সংখ্যা আর - দিন');
+    if (slugFree === false) return toast.error('এই লিংক আগে থেকেই নেওয়া');
+    setBusy(true);
+    const { error } = await supabase.rpc('super_create_store', {
+      p_store_name: f.storeName.trim(), p_slug: f.slug, p_owner_name: f.ownerName.trim(), p_phone: phone,
+      p_business_type: f.businessType || null, p_email: f.email.trim().toLowerCase(), p_password: f.password, p_plan: f.plan,
+    });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    setDone({ storeName: f.storeName.trim(), slug: f.slug, email: f.email.trim().toLowerCase(), password: f.password });
+    setF(empty); setSlugTouched(false);
+    toast.success('নতুন দোকান তৈরি হয়েছে!');
+    onCreated();
+  };
+
+  const credText = done ? `🛍️ আপনার দোকান প্রস্তুত!\n\nদোকানের নাম: ${done.storeName}\nদোকানের লিংক: ${window.location.origin}/?store=${done.slug}\n\nলগইন: ${window.location.origin}/merchant/login\nইমেইল: ${done.email}\nপাসওয়ার্ড: ${done.password}` : '';
+  const input = 'w-full rounded-xl bg-slate-800 border border-slate-700 px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500';
+  const label = 'block text-sm text-slate-300 mb-1.5';
+  return (
+    <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+      <h2 className="text-base font-bold mb-1">নতুন দোকান তৈরি করুন</h2>
+      <p className="text-xs text-slate-400 mb-4">সাইন আপ পেজের মতোই সব তথ্য লাগবে, শুধু মোবাইল বা ইমেইলের কোড লাগবে না।</p>
+      <form onSubmit={submit} className="space-y-3.5" noValidate>
+        <div><label htmlFor="sc-owner" className={label}>মালিকের নাম</label>
+          <input id="sc-owner" className={input} value={f.ownerName} onChange={(e) => set('ownerName', e.target.value)} /></div>
+        <div><label htmlFor="sc-phone" className={label}>মোবাইল নম্বর</label>
+          <input id="sc-phone" inputMode="tel" className={input} value={f.phone} onChange={(e) => set('phone', e.target.value)} placeholder="01XXXXXXXXX" /></div>
+        <div><label htmlFor="sc-email" className={label}>ইমেইল (লগইনের জন্য)</label>
+          <input id="sc-email" type="email" className={input} value={f.email} onChange={(e) => set('email', e.target.value)} placeholder="owner@example.com" /></div>
+        <div><label htmlFor="sc-pass" className={label}>পাসওয়ার্ড</label>
+          <input id="sc-pass" type="text" autoComplete="off" className={input} value={f.password} onChange={(e) => set('password', e.target.value)} placeholder="কমপক্ষে ৮ অক্ষর" /></div>
+        <div><label htmlFor="sc-store" className={label}>দোকান বা কোম্পানির নাম</label>
+          <input id="sc-store" className={input} value={f.storeName} onChange={(e) => set('storeName', e.target.value)} /></div>
+        <div><label htmlFor="sc-slug" className={label}>দোকানের লিংক</label>
+          <input id="sc-slug" className={input} value={f.slug} autoCapitalize="none" spellCheck={false}
+            onChange={(e) => { setSlugTouched(true); set('slug', e.target.value.toLowerCase().replace(/\s+/g, '-')); }} placeholder="my-shop" />
+          <p className={`text-xs mt-1.5 ${!f.slug ? 'text-slate-500' : !SLUG_OK.test(f.slug) || slugFree === false ? 'text-red-400' : slugFree ? 'text-emerald-400' : 'text-slate-400'}`}>
+            {!f.slug ? 'ইংরেজি ছোট অক্ষর, সংখ্যা আর -' : !SLUG_OK.test(f.slug) ? 'শুধু ইংরেজি ছোট অক্ষর, সংখ্যা আর - (৩-৪০ অক্ষর)'
+              : slugFree === false ? '✗ এই লিংক আগে থেকেই নেওয়া' : slugFree ? `✓ খালি আছে: ${window.location.origin}/?store=${f.slug}` : 'দেখা হচ্ছে…'}
+          </p></div>
+        <div><label htmlFor="sc-type" className={label}>ব্যবসার ধরন</label>
+          <select id="sc-type" className={input} value={f.businessType} onChange={(e) => set('businessType', e.target.value)}>
+            <option value="">বেছে নিন (ঐচ্ছিক)</option>
+            {BUSINESS_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select></div>
+        <div><p className={label}>প্ল্যান</p>
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label="প্ল্যান">
+            {[['trial', 'ফ্রি ট্রায়াল'], ['no_expiry', 'মেয়াদ ছাড়া']].map(([k, l]) => (
+              <button key={k} type="button" aria-pressed={f.plan === k} onClick={() => set('plan', k)}
+                className={`rounded-lg px-3 py-2.5 text-sm font-bold border ${f.plan === k ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'border-slate-700 text-slate-300'}`}>{l}</button>
+            ))}
+          </div></div>
+        <button type="submit" disabled={busy} className="w-full rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold py-3">{busy ? 'তৈরি হচ্ছে…' : 'দোকান তৈরি করুন'}</button>
+      </form>
+      {done && (
+        <div className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4">
+          <p className="text-sm font-bold text-emerald-300 mb-2">✅ দোকান তৈরি হয়েছে! এই তথ্যগুলো মালিককে পাঠিয়ে দিন:</p>
+          <pre className="whitespace-pre-wrap break-all text-sm text-slate-200 font-mono">{credText}</pre>
+          <button type="button" onClick={() => navigator.clipboard.writeText(credText).then(() => toast.success('কপি হয়েছে')).catch(() => toast.error('কপি করা যায়নি, নিজে লিখে নিন'))}
+            className="mt-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-bold px-4 py-2.5">সব কপি করুন</button>
+        </div>
+      )}
+    </section>
+  );
+}
