@@ -7,6 +7,7 @@ import { Menu, ExternalLink } from 'lucide-react';
 import { AdminSidebar } from './AdminSidebar';
 import toast from 'react-hot-toast';
 import SubscriptionBanner, { useMyStore } from '../../components/admin/SubscriptionBanner';
+import NotFound from '../NotFound';
 
 function storefrontLink(search: string, storedSlug: string | null): string {
   const slug = new URLSearchParams(search).get('store') || storedSlug;
@@ -28,16 +29,6 @@ export default function AdminLayout() {
   const navRef = useRef<HTMLElement>(null);
   const mainRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    if (!loading) {
-      if (!profile) {
-        navigate('/merchant/login');
-      } else if (profile.role !== 'admin' && profile.role !== 'manager' && profile.role !== 'demo') {
-        toast.error('Access denied. Administrator privileges required.');
-        navigate('/');
-      }
-    }
-  }, [profile, loading, navigate]);
 
   const handleSignOut = async () => {
     try {
@@ -62,7 +53,9 @@ export default function AdminLayout() {
     );
   }
 
-  if (!profile || (profile.role !== 'admin' && profile.role !== 'manager' && profile.role !== 'demo')) return null;
+  // Anyone who isn't this store's owner/staff sees an ordinary "page not found":
+  // the admin area and its login are never revealed on a shop's website.
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'manager' && profile.role !== 'demo')) return <NotFound />;
 
   return (
     <div className="flex h-screen w-full bg-white font-sans text-slate-900 selection:bg-slate-100 overflow-hidden">
