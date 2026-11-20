@@ -1,6 +1,6 @@
 // Phone verification for merchant sign-up: POST { action: 'send' | 'verify', phone, code? }
 import { serverConfig, rest } from './_store-lib.js';
-import { sendSms, smsConfigured } from './_sms.js';
+import { sendSms, smsConfigured, loadSmsConfig } from './_sms.js';
 
 const PHONE_RE = /^01[3-9]\d{8}$/;
 const CODE_TTL_MIN = 5;
@@ -35,8 +35,22 @@ export async function onRequest(context) {
     const ip = context.request.headers.get('CF-Connecting-IP') || '';
     const pepper = cfg.serviceKey; // server-only secret, never sent to the browser
 
+    // Super admin: send a test message to check the SMS settings
+    if (body.action === 'test') {
+      const auth = context.request.headers.get('Authorization') || '';
+      const u = auth.startsWith('Bearer ') ? await fetch(`${cfg.url}/auth/v1/user`, { headers: { Authorization: auth, apikey: cfg.anonKey } }) : null;
+      const user = u && u.ok ? await u.json() : null;
+      const sa = user?.id ? await rest(cfg, `super_admins?user_id=eq.${encodeURIComponent(user.id)}&select=user_id&limit=1`) : [];
+      if (!sa?.length) return json({ error: 'শুধু সুপার এডমিন টেস্ট SMS পাঠাতে পারবে' }, 403);
+      const sms = await loadSmsConfig(cfg);
+      if (!smsConfigured(sms)) return json({ error: 'আগে API Key আর Sender ID সেভ করুন' }, 400);
+      await sendSms(sms, phone, 'Cloud Commerce test message. SMS is working.');
+      return json({ ok: true });
+    }
+
     if (body.action === 'send') {
-      if (!smsConfigured(context.env)) return json({ error: 'SMS সার্ভিস এখনো সেটআপ হয়নি। একটু পরে চেষ্টা করুন।' }, 503);
+      const sms = await loadSmsConfig(cfg);
+      if (!smsConfigured(sms)) return json({ error: 'SMS সার্ভিস এখনো সেটআপ হয়নি। একটু পরে চেষ্টা করুন।' }, 503);
 
       const owned = await rest(cfg, `stores?owner_phone=eq.${phone}&select=id&limit=1`);
       if (owned?.length) return json({ error: 'এই নম্বর দিয়ে আগেই একটা দোকান খোলা হয়েছে। লগইন করুন।' }, 409);
@@ -59,7 +73,7 @@ export async function onRequest(context) {
           expires_at: new Date(Date.now() + CODE_TTL_MIN * 60000).toISOString(),
         }]),
       });
-      await sendSms(context.env, phone, `Your Cloud Commerce code is ${code}. Valid for ${CODE_TTL_MIN} minutes. Do not share it with anyone.`);
+      await sendSms(sms, phone, `Your Cloud Commerce code is ${code}. Valid for ${CODE_TTL_MIN} minutes. Do not share it with anyone.`);
       return json({ ok: true, ttl: CODE_TTL_MIN * 60 });
     }
 

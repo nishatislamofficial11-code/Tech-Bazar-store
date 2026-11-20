@@ -212,3 +212,72 @@ export function LandingSettingsCard() {
     </section>
   );
 }
+
+// BulkSMSBD credentials for sign-up codes (stored as private settings: only super admin + server can read)
+export function SmsSettingsCard() {
+  const [apiKey, setApiKey] = useState('');
+  const [hasKey, setHasKey] = useState(false);
+  const [senderId, setSenderId] = useState('');
+  const [testPhone, setTestPhone] = useState('');
+  const [busy, setBusy] = useState('');
+  useEffect(() => {
+    supabase.from('platform_settings').select('key, value').in('key', ['private_sms_api_key', 'private_sms_sender_id']).then(({ data }) => {
+      const map = Object.fromEntries((data || []).map((r: { key: string; value: string }) => [r.key, r.value]));
+      setHasKey(Boolean(map.private_sms_api_key));
+      setSenderId(map.private_sms_sender_id || '');
+    });
+  }, []);
+  const save = async () => {
+    if (!hasKey && !apiKey.trim()) { toast.error('API Key দিন'); return; }
+    if (!senderId.trim()) { toast.error('Sender ID দিন'); return; }
+    setBusy('save');
+    const now = new Date().toISOString();
+    const rows = [{ key: 'private_sms_sender_id', value: senderId.trim(), updated_at: now }];
+    if (apiKey.trim()) rows.push({ key: 'private_sms_api_key', value: apiKey.trim(), updated_at: now });
+    const { error } = await supabase.from('platform_settings').upsert(rows, { onConflict: 'key' });
+    setBusy('');
+    if (error) { toast.error(error.message); return; }
+    if (apiKey.trim()) setHasKey(true);
+    setApiKey('');
+    toast.success('SMS সেটিংস সেভ হয়েছে');
+  };
+  const test = async () => {
+    setBusy('test');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+        body: JSON.stringify({ action: 'test', phone: testPhone }),
+      });
+      const out = await res.json().catch(() => null);
+      if (!res.ok || !out?.ok) throw new Error(out?.error || `সমস্যা হয়েছে (HTTP ${res.status})`);
+      toast.success('টেস্ট SMS পাঠানো হয়েছে, ফোন দেখুন');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'টেস্ট SMS যায়নি');
+    } finally { setBusy(''); }
+  };
+  const input = 'w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500';
+  return (
+    <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+      <div>
+        <h2 className="text-base font-bold flex items-center gap-2"><Settings2 className="h-5 w-5 text-emerald-400" />SMS সেটিংস (BulkSMSBD)</h2>
+        <p className="mt-1 text-xs text-slate-400">সাইন আপের যাচাই কোড এই একাউন্ট থেকে যাবে। API Key শুধু আপনি আর সার্ভার দেখতে পারে।</p>
+      </div>
+      <div>
+        <label htmlFor="sms-key" className="block text-xs text-slate-300 mb-1">API Key</label>
+        <input id="sms-key" type="password" autoComplete="off" className={input} value={apiKey} onChange={(e) => setApiKey(e.target.value)}
+          placeholder={hasKey ? 'সেভ করা আছে — বদলাতে নতুনটা দিন' : 'BulkSMSBD API Key'} />
+      </div>
+      <div>
+        <label htmlFor="sms-sender" className="block text-xs text-slate-300 mb-1">Sender ID</label>
+        <input id="sms-sender" className={input} value={senderId} onChange={(e) => setSenderId(e.target.value)} placeholder="BulkSMSBD Sender ID" />
+      </div>
+      <button onClick={save} disabled={!!busy} className="w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold py-2.5 text-sm">{busy === 'save' ? 'সেভ হচ্ছে…' : 'সেভ করুন'}</button>
+      <div className="flex gap-2">
+        <input aria-label="টেস্ট SMS যাবে এমন নম্বর" inputMode="tel" className={input} value={testPhone} onChange={(e) => setTestPhone(e.target.value)} placeholder="01XXXXXXXXX" />
+        <button onClick={test} disabled={!!busy || !hasKey} className="shrink-0 rounded-lg border border-slate-700 px-4 text-sm font-bold text-slate-200 disabled:opacity-50">{busy === 'test' ? 'পাঠানো হচ্ছে…' : 'টেস্ট SMS'}</button>
+      </div>
+    </section>
+  );
+}

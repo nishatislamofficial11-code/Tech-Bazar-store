@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { Store, Plus, Copy, LogOut, RefreshCw, CheckCircle2, XCircle, Settings2, Trash2, Search } from 'lucide-react';
 import { filterStores } from '../../lib/storeSearch';
-import { PlanBadge, PlanActions, PlatformSettingsCard, LandingSettingsCard, type PlanInfo } from '../../components/superadmin/PlatformControls';
+import { PlanBadge, PlanActions, PlatformSettingsCard, LandingSettingsCard, SmsSettingsCard, type PlanInfo } from '../../components/superadmin/PlatformControls';
 
 interface StoreRow extends PlanInfo {
   id: string;
@@ -267,6 +267,7 @@ export default function SuperAdminDashboard() {
 
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
         <PlatformSettingsCard />
+        <SmsSettingsCard />
         <LandingSettingsCard />
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
           <h2 className="text-base font-bold flex items-center gap-2 mb-4">
