@@ -11,6 +11,9 @@ const PROVIDERS = {
   google: { keyName: 'private_google_api_key', defaultModel: 'gemini-2.5-flash' },
 };
 const HISTORY_LIMIT = 20;
+// Hand-offs caused by a technical problem (key, model, limit) start with this mark; the next
+// customer message gives the AI another try instead of leaving the chat stuck with staff.
+const TECH = '⚠️ ';
 const DEFAULT_HANDOFF = 'আপনার বিষয়টি আমাদের একজন এজেন্টকে জানানো হয়েছে। কিছুক্ষণের মধ্যেই তিনি আপনাকে উত্তর দেবেন।';
 
 const REPLY_SCHEMA = {
@@ -244,8 +247,9 @@ export async function handleCustomerMessage(cfg, store, conv, text) {
   await addMessage(cfg, conv, 'customer', message);
   const base = { last_message: message.slice(0, 200), last_message_at: new Date().toISOString(), unread: (conv.unread || 0) + 1 };
 
-  // A resolved chat goes back to the AI when the customer writes again
-  const status = conv.status === 'resolved' ? 'ai' : conv.status;
+  // A resolved chat, or one handed over only because the AI had a technical problem, goes back to the AI
+  const techStuck = conv.status === 'needs_human' && String(conv.handoff_reason || '').startsWith(TECH);
+  const status = conv.status === 'resolved' || techStuck ? 'ai' : conv.status;
   if (status !== 'ai' || conv.ai_paused) {
     await updateConversation(cfg, conv, { ...base, status });
     return { reply: null, status };
@@ -266,9 +270,9 @@ export async function handleCustomerMessage(cfg, store, conv, text) {
   };
 
   const platform = await platformAi(cfg);
-  if (!platform.apiKey) return handOff('AI চালু নেই (সুপার এডমিনে বেছে নেওয়া AI-এর API Key দেওয়া হয়নি)', null);
+  if (!platform.apiKey) return handOff(`${TECH}AI চালু নেই (সুপার এডমিনে বেছে নেওয়া AI-এর API Key দেওয়া হয়নি)`, null);
   const allowed = await rest(cfg, 'rpc/ai_use_reply', { method: 'POST', body: JSON.stringify({ p_store: store.id }) });
-  if (allowed !== true) return handOff('এই মাসের AI রিপ্লাই লিমিট শেষ বা AI প্যাক চালু নেই', null);
+  if (allowed !== true) return handOff(`${TECH}এই মাসের AI রিপ্লাই লিমিট শেষ বা AI প্যাক চালু নেই`, null);
 
   const history = await rest(cfg, `ai_messages?conversation_id=eq.${conv.id}&select=role,content&order=created_at.desc&limit=${HISTORY_LIMIT}`);
   let out;
@@ -276,11 +280,11 @@ export async function handleCustomerMessage(cfg, store, conv, text) {
     out = await askAi(platform, ai, await shopContext(cfg, store, ai), (history || []).reverse());
   } catch (err) {
     await refundReply(cfg, store.id);
-    return handOff(`AI উত্তর দিতে পারেনি (${String(err?.message || err).slice(0, 120)})`, null);
+    return handOff(`${TECH}AI উত্তর দিতে পারেনি (${String(err?.message || err).slice(0, 220)})`, null);
   }
   if (!out || typeof out.reply !== 'string' || !out.reply.trim()) {
     await refundReply(cfg, store.id);
-    return handOff('AI উত্তর দিতে পারেনি', null);
+    return handOff(`${TECH}AI উত্তর দিতে পারেনি`, null);
   }
 
   const sentiment = ['positive', 'neutral', 'negative'].includes(out.sentiment) ? out.sentiment : null;
@@ -291,7 +295,7 @@ export async function handleCustomerMessage(cfg, store, conv, text) {
     return handOff(String(out.handoff_reason || 'AI নিশ্চিত না').slice(0, 300), ai.handoff_message?.trim() || reply);
   }
   await addMessage(cfg, conv, 'ai', out.reply.trim());
-  await updateConversation(cfg, conv, { ...base, unread: 0, sentiment, summary, last_message: out.reply.trim().slice(0, 200) });
+  await updateConversation(cfg, conv, { ...base, status: 'ai', handoff_reason: null, unread: 0, sentiment, summary, last_message: out.reply.trim().slice(0, 200) });
   return { reply: out.reply.trim(), status: 'ai' };
 }
 
