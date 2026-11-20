@@ -14,6 +14,7 @@ const HISTORY_LIMIT = 20;
 // Hand-offs caused by a technical problem (key, model, limit) start with this mark; the next
 // customer message gives the AI another try instead of leaving the chat stuck with staff.
 const TECH = '⚠️ ';
+const BUSY_REPLY = 'দুঃখিত, এই মুহূর্তে উত্তর দিতে একটু সমস্যা হচ্ছে। আমাদের একজন প্রতিনিধি শীঘ্রই আপনাকে উত্তর দেবেন।';
 const DEFAULT_HANDOFF = 'আপনার বিষয়টি আমাদের একজন এজেন্টকে জানানো হয়েছে। কিছুক্ষণের মধ্যেই তিনি আপনাকে উত্তর দেবেন।';
 
 const REPLY_SCHEMA = {
@@ -138,14 +139,24 @@ function parseJson(text) {
   try { return JSON.parse(clean); } catch { return null; }
 }
 
+const RETRY_STATUS = new Set([429, 500, 502, 503, 504, 529]);
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Busy / overloaded answers are usually short spikes: try up to 3 times before giving up
 async function callApi(url, headers, body, label) {
-  const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
-  const data = await res.json().catch(() => null);
+  let res; let data;
+  for (const delay of [0, 1500, 4000]) {
+    if (delay) await wait(delay);
+    res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
+    data = await res.json().catch(() => null);
+    if (res.ok || !RETRY_STATUS.has(res.status)) break;
+  }
   if (!res.ok) {
-    if (res.status === 401 || res.status === 403) throw new Error(`${label} API Key ভুল বা অনুমতি নেই (${String(data?.error?.message || '').slice(0, 150)})`);
-    if (res.status === 429) throw new Error(`${label} ব্যস্ত বা ব্যালান্স শেষ, একটু পরে চেষ্টা করুন`);
-    if (res.status === 404) throw new Error(`${label}-এ এই মডেল পাওয়া যায়নি, সুপার এডমিনে মডেলের নাম ঠিক করুন (${String(data?.error?.message || '').slice(0, 150)})`);
-    throw new Error(`${label}: ${data?.error?.message || `HTTP ${res.status}`}`);
+    const detail = String(data?.error?.message || '').slice(0, 150);
+    if (res.status === 401 || res.status === 403) throw new Error(`${label} API Key ভুল বা অনুমতি নেই (${detail})`);
+    if (res.status === 429) throw new Error(`${label} ব্যস্ত বা লিমিট/ব্যালান্স শেষ (${detail})`);
+    if (res.status === 404) throw new Error(`${label}-এ এই মডেল পাওয়া যায়নি, সুপার এডমিনে মডেলের নাম ঠিক করুন (${detail})`);
+    throw new Error(`${label}: ${detail || `HTTP ${res.status}`}`);
   }
   return data;
 }
@@ -280,11 +291,11 @@ export async function handleCustomerMessage(cfg, store, conv, text) {
     out = await askAi(platform, ai, await shopContext(cfg, store, ai), (history || []).reverse());
   } catch (err) {
     await refundReply(cfg, store.id);
-    return handOff(`${TECH}AI উত্তর দিতে পারেনি (${String(err?.message || err).slice(0, 220)})`, null);
+    return handOff(`${TECH}AI উত্তর দিতে পারেনি (${String(err?.message || err).slice(0, 220)})`, BUSY_REPLY);
   }
   if (!out || typeof out.reply !== 'string' || !out.reply.trim()) {
     await refundReply(cfg, store.id);
-    return handOff(`${TECH}AI উত্তর দিতে পারেনি`, null);
+    return handOff(`${TECH}AI উত্তর দিতে পারেনি`, BUSY_REPLY);
   }
 
   const sentiment = ['positive', 'neutral', 'negative'].includes(out.sentiment) ? out.sentiment : null;
