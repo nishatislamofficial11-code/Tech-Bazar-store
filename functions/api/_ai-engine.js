@@ -10,7 +10,7 @@ const PROVIDERS = {
   anthropic: { keyName: 'private_anthropic_api_key', defaultModel: 'claude-haiku-5-5' },
   openai: { keyName: 'private_openai_api_key', defaultModel: 'gpt-4o-mini' },
   google: { keyName: 'private_google_api_key', defaultModel: 'gemini-flash-latest' },
-  groq: { keyName: 'private_groq_api_key', defaultModel: 'llama-3.3-70b-versatile' },
+  groq: { keyName: 'private_groq_api_key', defaultModel: 'openai/gpt-oss-120b' },
   openrouter: { keyName: 'private_openrouter_api_key', defaultModel: 'meta-llama/llama-3.3-70b-instruct:free' },
 };
 // OpenAI-style chat APIs (same request shape, different address)
@@ -47,10 +47,14 @@ async function platformAi(cfg) {
   const rows = await rest(cfg, 'platform_settings?key=in.(ai_provider,ai_model,private_anthropic_api_key,private_openai_api_key,private_google_api_key,private_groq_api_key,private_openrouter_api_key)&select=key,value');
   const map = Object.fromEntries((rows || []).map((r) => [r.key, r.value]));
   const provider = PROVIDERS[map.ai_provider] ? map.ai_provider : 'anthropic';
+  const backups = Object.entries(PROVIDERS)
+    .filter(([id, p]) => id !== provider && String(map[p.keyName] || '').trim())
+    .map(([id, p]) => ({ provider: id, apiKey: String(map[p.keyName]).trim(), model: p.defaultModel }));
   return {
     provider,
     apiKey: String(map[PROVIDERS[provider].keyName] || '').trim(),
     model: String(map.ai_model || '').trim() || PROVIDERS[provider].defaultModel,
+    backups,
   };
 }
 
@@ -148,6 +152,7 @@ function systemPrompt(ai) {
 - কাস্টমার যে ভাষায় লেখে (বাংলা, বাংলিশ বা ইংরেজি) সেভাবে বুঝবে; দোকানদারের নিয়মে অন্য কিছু না বললে বাংলায় উত্তর দেবে।
 - উত্তর ছোট, ভদ্র আর মানুষের মতো রাখো (সাধারণত ১-৩ বাক্য)। মেসেঞ্জারের মতো সাধারণ লেখা, কোনো markdown নয়।
 - কেউ কিনতে চাইলে নাম, মোবাইল নম্বর, পুরো ঠিকানা আর কোন প্রোডাক্ট (সাইজ/রং/পরিমাণ) নিশ্চিত করে নাও।
+- কাস্টমার ছবি পাঠালে (প্রোডাক্টের ছবি বা স্ক্রিনশট) দেখে বোঝো কোন প্রোডাক্ট বা কী সমস্যা, তারপর উত্তর দাও। পেমেন্টের স্ক্রিনশট বা ভাঙা/ভুল প্রোডাক্টের ছবি হলে needs_human=true।
 - কাস্টমার ছবি বা লিংক চাইলে, বা তুমি কোনো প্রোডাক্টের কথা বললে, show_products-এ সেই প্রোডাক্টের কোড দাও (যেমন ["P3"], সর্বোচ্চ ৪টা)। চ্যাটে ছবি, দাম আর কেনার লিংকসহ কার্ড দেখাবে। "ছবি পাঠাতে পারি না" বলবে না।
 
 কঠোর নিয়ম:
@@ -167,15 +172,30 @@ needs_human=true হলে reply-তে কাস্টমারকে ভদ্
 {"reply": "কাস্টমারকে পাঠানোর মেসেজ", "needs_human": true/false, "handoff_reason": "এজেন্টের জন্য ছোট কারণ (না লাগলে খালি)", "sentiment": "positive" | "neutral" | "negative", "summary": "পুরো কথোপকথনের এক লাইনের সারাংশ", "show_products": ["P1"]}`;
 }
 
+// Neutral message list: { role, content, image? } — each company's function turns it into its own format.
+// Only the customer's 2 most recent photos are sent, made smaller by Cloudinary.
 function toApiMessages(history) {
   const out = [];
-  for (const m of history) {
+  let images = 0;
+  for (let i = history.length - 1; i >= 0; i--) {
+    const m = history[i];
     if (m.role === 'system') continue;
     const role = m.role === 'customer' ? 'user' : 'assistant';
-    if (!out.length && role !== 'user') continue;
-    out.push({ role, content: m.content });
+    const photo = role === 'user' && images < 2 ? (m.attachments || []).find((a) => a?.type === 'image')?.url : null;
+    if (photo) images++;
+    out.unshift({ role, content: m.content, ...(photo ? { image: photo.replace('/upload/', '/upload/w_800,c_limit,q_auto,f_jpg/') } : {}) });
   }
+  while (out.length && out[0].role !== 'user') out.shift();
   return out;
+}
+
+async function imageAsBase64(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('ছবি খোলা যায়নি');
+  const buf = new Uint8Array(await res.arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+  return { mime: res.headers.get('content-type') || 'image/jpeg', data: btoa(bin) };
 }
 
 function parseJson(text) {
@@ -198,6 +218,11 @@ async function callApi(url, headers, body, label) {
   }
   if (!res.ok) {
     const detail = String(data?.error?.message || '').slice(0, 150);
+    if (RETRY_STATUS.has(res.status)) {
+      const busy = new Error(res.status === 429 ? `${label} ব্যস্ত বা লিমিট/ব্যালান্স শেষ (${detail})` : `${label}: ${detail || `HTTP ${res.status}`}`);
+      busy.busy = true;
+      throw busy;
+    }
     if (res.status === 401 || res.status === 403) throw new Error(`${label} API Key ভুল বা অনুমতি নেই (${detail})`);
     if (res.status === 429) throw new Error(`${label} ব্যস্ত বা লিমিট/ব্যালান্স শেষ (${detail})`);
     if (res.status === 404 || /does not exist|not found|no longer available|decommission|deprecated/i.test(detail)) {
@@ -224,7 +249,10 @@ async function askAnthropic(platform, system, context, messages) {
         { type: 'text', text: system },
         { type: 'text', text: context, cache_control: { type: 'ephemeral' } },
       ],
-      messages,
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.image ? [{ type: 'image', source: { type: 'url', url: m.image } }, { type: 'text', text: m.content }] : m.content,
+      })),
     }, 'Claude');
   if (data?.stop_reason === 'refusal') return null;
   return parseJson((data?.content || []).find((b) => b.type === 'text')?.text);
@@ -236,7 +264,10 @@ async function askOpenAI(platform, system, context, messages) {
     { Authorization: `Bearer ${platform.apiKey}` },
     {
       model: platform.model,
-      messages: [{ role: 'system', content: `${system}\n\n${context}` }, ...messages],
+      messages: [{ role: 'system', content: `${system}\n\n${context}` }, ...messages.map((m) => ({
+        role: m.role,
+        content: m.image ? [{ type: 'text', text: m.content }, { type: 'image_url', image_url: { url: m.image } }] : m.content,
+      }))],
       // ChatGPT enforces the exact shape; the free services only promise valid JSON (the prompt describes the shape)
       ...(api.format === 'schema' ? { response_format: { type: 'json_schema', json_schema: { name: 'shop_reply', strict: true, schema: REPLY_SCHEMA } } } : {}),
       ...(api.format === 'json' ? { response_format: { type: 'json_object' } } : {}),
@@ -245,11 +276,20 @@ async function askOpenAI(platform, system, context, messages) {
 }
 
 async function askGemini(platform, system, context, messages) {
+  const contents = [];
+  for (const m of messages) {
+    const parts = [{ text: m.content }];
+    if (m.image) {
+      const img = await imageAsBase64(m.image);
+      parts.unshift({ inlineData: { mimeType: img.mime, data: img.data } });
+    }
+    contents.push({ role: m.role === 'assistant' ? 'model' : 'user', parts });
+  }
   const data = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(platform.model)}:generateContent`,
     { 'x-goog-api-key': platform.apiKey },
     {
       systemInstruction: { parts: [{ text: `${system}\n\n${context}` }] },
-      contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+      contents,
       generationConfig: { responseMimeType: 'application/json' },
     }, 'Gemini');
   return parseJson(data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join(''));
@@ -266,7 +306,7 @@ async function askAiOnce(platform, ai, context, history) {
 
 // If the saved model has been retired, pick a current one from the company's live list,
 // save it for everyone, and try again once.
-async function askAi(cfg, platform, ai, context, history) {
+async function askAiWithModelFix(cfg, platform, ai, context, history, saveModel) {
   try {
     return await askAiOnce(platform, ai, context, history);
   } catch (err) {
@@ -274,12 +314,28 @@ async function askAi(cfg, platform, ai, context, history) {
     const models = await listModels(platform.provider, platform.apiKey).catch(() => []);
     const next = pickModel(platform.provider, models, platform.model);
     if (!next) throw err;
-    await rest(cfg, 'platform_settings?on_conflict=key', {
+    if (saveModel) await rest(cfg, 'platform_settings?on_conflict=key', {
       method: 'POST',
       headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify({ key: 'ai_model', value: next, updated_at: new Date().toISOString() }),
     }).catch(() => null);
     return askAiOnce({ ...platform, model: next }, ai, context, history);
+  }
+}
+
+// When the chosen company is busy or over its limit, try the other companies that have a key saved.
+async function askAi(cfg, platform, ai, context, history) {
+  try {
+    return await askAiWithModelFix(cfg, platform, ai, context, history, true);
+  } catch (err) {
+    if (!err?.busy || !platform.backups?.length) throw err;
+    let last = err;
+    for (const backup of platform.backups) {
+      try {
+        return await askAiWithModelFix(cfg, backup, ai, context, history, false);
+      } catch (e) { last = e; }
+    }
+    throw last;
   }
 }
 
@@ -338,10 +394,11 @@ async function alertStaff(cfg, store, conv, reason) {
  * A customer message arrived. Saves it and, if the AI is in charge of this chat, writes the reply.
  * Returns { reply: string|null, status } — the caller delivers `reply` to the customer's channel.
  */
-export async function handleCustomerMessage(cfg, store, conv, text) {
-  const message = String(text || '').trim().slice(0, 4000);
+export async function handleCustomerMessage(cfg, store, conv, text, photos = []) {
+  const images = (photos || []).filter((u) => typeof u === 'string' && /^https:\/\/res\.cloudinary\.com\//.test(u)).slice(0, 3);
+  const message = String(text || '').trim().slice(0, 4000) || (images.length ? '📷 ছবি পাঠিয়েছেন' : '');
   if (!message) return { reply: null, status: conv.status };
-  await addMessage(cfg, conv, 'customer', message);
+  await addMessage(cfg, conv, 'customer', message, images.length ? { attachments: images.map((url) => ({ type: 'image', url })) } : {});
   const base = { last_message: message.slice(0, 200), last_message_at: new Date().toISOString(), unread: (conv.unread || 0) + 1 };
 
   // A resolved chat, or one handed over only because the AI had a technical problem, goes back to the AI
@@ -371,7 +428,7 @@ export async function handleCustomerMessage(cfg, store, conv, text) {
   const allowed = await rest(cfg, 'rpc/ai_use_reply', { method: 'POST', body: JSON.stringify({ p_store: store.id }) });
   if (allowed !== true) return handOff(`${TECH}এই মাসের AI রিপ্লাই লিমিট শেষ বা AI প্যাক চালু নেই`, null);
 
-  const history = await rest(cfg, `ai_messages?conversation_id=eq.${conv.id}&select=role,content&order=created_at.desc&limit=${HISTORY_LIMIT}`);
+  const history = await rest(cfg, `ai_messages?conversation_id=eq.${conv.id}&select=role,content,attachments&order=created_at.desc&limit=${HISTORY_LIMIT}`);
   let out;
   let shop = { products: [] };
   try {
@@ -381,6 +438,8 @@ export async function handleCustomerMessage(cfg, store, conv, text) {
     out = await askAi(cfg, platform, ai, shop.text, recent);
   } catch (err) {
     await refundReply(cfg, store.id);
+    // A photo the AI couldn't read is for a person to look at, not a reason to retry
+    if (images.length && !err?.busy) return handOff('কাস্টমার ছবি পাঠিয়েছেন, AI দেখতে পারেনি। ছবি দেখে উত্তর দিন', BUSY_REPLY);
     return handOff(`${TECH}AI উত্তর দিতে পারেনি (${String(err?.message || err).slice(0, 220)})`, BUSY_REPLY);
   }
   if (!out || typeof out.reply !== 'string' || !out.reply.trim()) {

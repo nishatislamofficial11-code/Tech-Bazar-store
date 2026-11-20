@@ -54,7 +54,9 @@ export async function onRequest(context) {
 
     if (body.action !== 'send') return json({ ok: false, error: 'Unknown action' }, 400);
     const message = String(body.message || '').trim();
-    if (!message) return json({ ok: false, error: 'মেসেজ লিখুন' }, 400);
+    const photos = (Array.isArray(body.photos) ? body.photos : []).map(String)
+      .filter((u) => /^https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\//.test(u) && u.length < 500).slice(0, 3);
+    if (!message && !photos.length) return json({ ok: false, error: 'মেসেজ লিখুন' }, 400);
     if (message.length > 1000) return json({ ok: false, error: 'মেসেজ অনেক বড়, একটু ছোট করে লিখুন' }, 400);
     const ip = String(request.headers.get('CF-Connecting-IP') || '').slice(0, 45);
 
@@ -76,7 +78,7 @@ export async function onRequest(context) {
       if ((recent || []).length >= MAX_MESSAGES_PER_10_MIN) return json({ ok: false, error: 'একটু থামুন, কিছুক্ষণ পর আবার লিখুন' }, 429);
     }
 
-    const result = await handleCustomerMessage(cfg, store, conv, message);
+    const result = await handleCustomerMessage(cfg, store, conv, message, photos);
     return json({ ok: true, reply: result.reply, status: result.status, attachments: result.attachments || [] });
   } catch (err) {
     return json({ ok: false, error: 'এখন উত্তর দেওয়া যাচ্ছে না, একটু পরে চেষ্টা করুন' }, 500);

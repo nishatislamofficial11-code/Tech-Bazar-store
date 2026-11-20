@@ -21,10 +21,12 @@ export interface AiConversation {
 }
 
 export interface ProductCard { type: 'product'; title: string; price: number; image: string | null; path: string }
+export interface PhotoAttachment { type: 'image'; url: string }
+export type ChatAttachment = ProductCard | PhotoAttachment;
 
 export interface AiMessage {
   id: string;
-  attachments?: ProductCard[] | null;
+  attachments?: ChatAttachment[] | null;
   role: 'customer' | 'ai' | 'agent' | 'system';
   content: string;
   agent_name: string | null;

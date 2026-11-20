@@ -22,7 +22,7 @@ const PROVIDERS: { id: Provider; label: string; keyName: string; keyHint: string
   },
   {
     id: 'groq', label: 'Groq (ফ্রি টেস্ট)', keyName: 'private_groq_api_key', keyHint: 'gsk_...', site: 'console.groq.com',
-    models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+    models: ['openai/gpt-oss-120b'],
   },
   {
     id: 'openrouter', label: 'OpenRouter (ফ্রি টেস্ট)', keyName: 'private_openrouter_api_key', keyHint: 'sk-or-...', site: 'openrouter.ai',
