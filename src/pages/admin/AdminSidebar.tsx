@@ -7,7 +7,7 @@ import {
   Sliders, Paintbrush, SearchCheck, LogOut, 
   Search, X, PanelLeftClose, PanelLeft, 
   Globe, Receipt, Box, LifeBuoy, Settings, CreditCard,
-  ChevronDown, ChevronRight,
+  ChevronDown, ChevronRight, Gem,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { buildCloudinaryUrl } from '../../lib/cloudinary';
@@ -23,6 +23,7 @@ export interface AdminSidebarProps {
   onCloseMobile?: () => void;
   navRef?: React.RefObject<HTMLElement | null>;
   onScroll?: (e: React.UIEvent<HTMLElement>) => void;
+  plan?: { status: string; trial_ends_at: string | null; paid_until: string | null; open: boolean } | null;
 }
 
 export interface NavItemDef {
@@ -32,12 +33,13 @@ export interface NavItemDef {
   adminOnly?: boolean;
   badgeKey?: 'pendingOrders' | 'incompleteOrders' | 'pendingReviews';
   children?: { name: string; path: string; adminOnly?: boolean }[];
+  section?: string;
 }
 
 export const NAV_ITEMS: NavItemDef[] = [
   { name: 'Dashboard', path: '/admin', icon: PieChart },
-  { name: 'Analytics', path: '/admin/analytics', icon: Activity, adminOnly: true },
-  { name: 'Visitors', path: '/admin/visitor-analytics', icon: Globe, adminOnly: true },
+  { section: 'Shop & Growth', name: 'Analytics', path: '/admin/analytics', icon: Activity, adminOnly: true },
+  { section: 'Shop & Growth', name: 'Visitors', path: '/admin/visitor-analytics', icon: Globe, adminOnly: true },
   { name: 'Orders', path: '/admin/orders', icon: Inbox, badgeKey: 'pendingOrders' },
   { name: 'Incomplete', path: '/admin/incomplete-orders', icon: Receipt, badgeKey: 'incompleteOrders' },
   { 
@@ -51,13 +53,14 @@ export const NAV_ITEMS: NavItemDef[] = [
   },
   { name: 'Categories', path: '/admin/categories', icon: FolderTree },
   { name: 'Reviews', path: '/admin/reviews', icon: Star, badgeKey: 'pendingReviews' },
-  { name: 'Banners', path: '/admin/banners', icon: ImageIcon, adminOnly: true },
-  { name: 'Landing Pages', path: '/admin/landing-pages', icon: LayoutTemplate, adminOnly: true },
-  { name: 'Pages', path: '/admin/pages', icon: FileText, adminOnly: true },
-  { name: 'Features', path: '/admin/features', icon: Zap, adminOnly: true },
-  { name: 'Logistics', path: '/admin/couriers', icon: Truck, adminOnly: true },
-  { name: 'Tracking', path: '/admin/pixel', icon: Target, adminOnly: true },
+  { section: 'Shop & Growth', name: 'Banners', path: '/admin/banners', icon: ImageIcon, adminOnly: true },
+  { section: 'Shop & Growth', name: 'Landing Pages', path: '/admin/landing-pages', icon: LayoutTemplate, adminOnly: true },
+  { section: 'Shop & Growth', name: 'Pages', path: '/admin/pages', icon: FileText, adminOnly: true },
+  { section: 'Shop & Growth', name: 'Features', path: '/admin/features', icon: Zap, adminOnly: true },
+  { section: 'Sales Tools', name: 'Logistics', path: '/admin/couriers', icon: Truck, adminOnly: true },
+  { section: 'Sales Tools', name: 'Tracking', path: '/admin/pixel', icon: Target, adminOnly: true },
   { 
+    section: 'Sales Tools',
     name: 'Fraud Guard', 
     path: '/admin/fraud-check',
     icon: ShieldCheck, 
@@ -67,6 +70,7 @@ export const NAV_ITEMS: NavItemDef[] = [
     ]
   },
   { 
+    section: 'Team',
     name: 'Team', 
     path: '/admin/users', 
     icon: Users, 
@@ -76,8 +80,8 @@ export const NAV_ITEMS: NavItemDef[] = [
       { name: 'Customers', path: '/admin/customers', adminOnly: true }
     ]
   },
-  { name: 'Appearance', path: '/admin/customize', icon: Paintbrush, adminOnly: true },
-  { name: 'SEO', path: '/admin/seo', icon: SearchCheck, adminOnly: true },
+  { section: 'Shop & Growth', name: 'Appearance', path: '/admin/customize', icon: Paintbrush, adminOnly: true },
+  { section: 'Shop & Growth', name: 'SEO', path: '/admin/seo', icon: SearchCheck, adminOnly: true },
 ];
 
 export const BOTTOM_NAV_ITEMS: NavItemDef[] = [
@@ -96,9 +100,14 @@ export function AdminSidebar({
   onCloseMobile,
   navRef,
   onScroll,
+  plan,
 }: AdminSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+  const [tapped, setTapped] = useState<string | null>(null);
+  useEffect(() => { setTapped(null); }, [currentPath]);
+  const activePath = tapped || currentPath;
+  const navLabel = (n: string) => n;
 
   useEffect(() => {
     const parentMatches = NAV_ITEMS.filter(item => 
@@ -182,6 +191,12 @@ export function AdminSidebar({
     const q = searchQuery.toLowerCase().trim();
     return availableItems.filter((item) => item.name.toLowerCase().includes(q));
   }, [availableItems, searchQuery]);
+  const sectionOrder = ['', 'Shop & Growth', 'Sales Tools', 'Team'];
+  const grouped = useMemo(() => sectionOrder
+    .map((sec) => ({ sec, items: filteredItems.filter((i) => (i.section || '') === sec) }))
+    .filter((g) => g.items.length > 0), [filteredItems]);
+  const planDays = plan ? Math.ceil((new Date((plan.status === 'trial' ? plan.trial_ends_at : plan.paid_until) || 0).getTime() - Date.now()) / 86400000) : null;
+  const showPlan = !!plan && (plan.status === 'trial' || !plan.open || (plan.paid_until && planDays !== null && planDays <= 7));
 
   return (
     <div
@@ -262,8 +277,15 @@ export function AdminSidebar({
         onScroll={onScroll}
         className="custom-scrollbar flex-1 overflow-y-auto px-4 pb-4 space-y-1"
       >
-        {filteredItems.map((item) => {
-          const isActive = currentPath === item.path || (item.path !== '/admin' && currentPath.startsWith(item.path));
+        {grouped.map(({ sec, items }) => (
+          <div key={sec || 'main'} className={sec ? 'pt-5' : ''}>
+            {sec && (!isCollapsed || isMobile) && (
+              <p className="px-3 pb-2 text-[12px] font-semibold uppercase tracking-wider text-slate-400">{sec}</p>
+            )}
+            {sec && isCollapsed && !isMobile && <div className="mx-auto mb-2 h-px w-8 bg-slate-200" />}
+            <div className="space-y-1">
+        {items.map((item) => {
+          const isActive = activePath === item.path || (item.path !== '/admin' && activePath.startsWith(item.path));
           const badgeVal =
             item.badgeKey === 'pendingOrders' ? counts.pendingOrders
               : item.badgeKey === 'incompleteOrders' ? counts.incompleteOrders
@@ -271,7 +293,7 @@ export function AdminSidebar({
 
           const isExpanded = expandedMenus.includes(item.name);
           const hasChildren = item.children && item.children.length > 0;
-          const isParentActive = isActive || (hasChildren && item.children!.some(c => currentPath === c.path));
+          const isParentActive = isActive || (hasChildren && item.children!.some(c => activePath === c.path));
 
           return (
             <div key={item.name} className="flex flex-col">
@@ -280,31 +302,32 @@ export function AdminSidebar({
                 onClick={(e) => { 
                   if (hasChildren) {
                     toggleMenu(item.name, e);
-                  } else if (isMobile && onCloseMobile) {
-                    onCloseMobile();
+                  } else {
+                    setTapped(item.path);
+                    if (isMobile && onCloseMobile) onCloseMobile();
                   }
                 }}
-                className={`group flex items-center rounded-md transition-colors ${
+                className={`group relative flex items-center rounded-xl transition-all duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
                   isCollapsed && !isMobile
-                    ? 'h-10 w-10 mx-auto justify-center'
-                    : 'px-3 py-2 gap-3 justify-between'
+                    ? 'h-11 w-11 mx-auto justify-center'
+                    : 'px-3 py-2.5 gap-3 justify-between'
                 } ${
                   isParentActive && !hasChildren
-                    ? 'bg-slate-50 text-slate-900'
-                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-slate-700 hover:bg-slate-100 active:bg-primary/10'
                 }`}
                 title={isCollapsed && !isMobile ? item.name : undefined}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <item.icon
                     className={`shrink-0 ${isCollapsed && !isMobile ? 'h-6 w-6' : 'h-5 w-5'} ${
-                      isParentActive ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-500'
+                      isParentActive ? 'text-primary' : 'text-slate-500 group-hover:text-slate-700'
                     }`}
-                    strokeWidth={2}
+                    strokeWidth={isParentActive ? 2.2 : 1.8}
                   />
                   {(!isCollapsed || isMobile) && (
-                    <span className="truncate text-[14px] font-semibold">
-                      {item.name}
+                    <span className={`truncate text-[15px] ${isParentActive ? 'font-semibold' : 'font-medium'}`}>
+                      {navLabel(item.name)}
                     </span>
                   )}
                 </div>
@@ -312,7 +335,7 @@ export function AdminSidebar({
                 {(!isCollapsed || isMobile) && (
                   <div className="flex items-center gap-2">
                     {badgeVal > 0 && (
-                      <span className="shrink-0 rounded-full flex items-center justify-center min-w-[24px] h-[24px] px-1.5 text-[12px] font-medium bg-slate-100 text-slate-700">
+                      <span className="shrink-0 rounded-full flex items-center justify-center min-w-[24px] h-[22px] px-2 text-[12px] font-bold bg-primary text-white">
                         {badgeVal}
                       </span>
                     )}
@@ -337,17 +360,17 @@ export function AdminSidebar({
                     // Filter children by role
                     if (child.adminOnly && profile?.role !== 'admin') return null;
                     
-                    const isChildActive = currentPath === child.path;
+                    const isChildActive = activePath === child.path;
                     
                     return (
                       <Link
                         key={child.name}
                         to={child.path}
-                        onClick={() => { if (isMobile && onCloseMobile) onCloseMobile(); }}
-                        className={`flex items-center px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
+                        onClick={() => { setTapped(child.path); if (isMobile && onCloseMobile) onCloseMobile(); }}
+                        className={`flex items-center px-3 py-2 rounded-lg text-[14px] font-medium transition-all active:scale-[0.97] ${
                           isChildActive 
-                            ? 'bg-slate-50 text-indigo-700' 
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                            ? 'bg-primary/10 text-primary font-semibold' 
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                         }`}
                       >
                         {child.name}
@@ -359,35 +382,39 @@ export function AdminSidebar({
             </div>
           );
         })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* ── Bottom Settings & Support ── */}
       <div className="shrink-0 px-4 pt-4 pb-2 space-y-1">
         {availableBottomItems.map((item) => {
-          const isActive = currentPath === item.path || (item.path !== '/admin' && currentPath.startsWith(item.path));
+          const isActive = activePath === item.path || (item.path !== '/admin' && activePath.startsWith(item.path));
           return (
             <Link
               key={item.name}
               to={item.path}
-              className={`group flex items-center rounded-md transition-colors ${
+              onClick={() => { setTapped(item.path); if (isMobile && onCloseMobile) onCloseMobile(); }}
+              className={`group flex items-center rounded-xl transition-all duration-150 active:scale-[0.97] ${
                 isCollapsed && !isMobile
-                  ? 'h-10 w-10 mx-auto justify-center'
-                  : 'px-3 py-2 gap-3'
+                  ? 'h-11 w-11 mx-auto justify-center'
+                  : 'px-3 py-2.5 gap-3'
               } ${
                 isActive
-                  ? 'bg-slate-50 text-slate-900'
-                  : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-slate-700 hover:bg-slate-100 active:bg-primary/10'
               }`}
               title={isCollapsed && !isMobile ? item.name : undefined}
             >
               <item.icon
                 className={`shrink-0 ${isCollapsed && !isMobile ? 'h-6 w-6' : 'h-5 w-5'} ${
-                  isActive ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-500'
+                  isActive ? 'text-primary' : 'text-slate-500 group-hover:text-slate-700'
                 }`}
-                strokeWidth={2}
+                strokeWidth={isActive ? 2.2 : 1.8}
               />
               {(!isCollapsed || isMobile) && (
-                <span className="truncate text-[14px] font-semibold">
+                <span className={`truncate text-[15px] ${isActive ? 'font-semibold' : 'font-medium'}`}>
                   {item.name}
                 </span>
               )}
@@ -395,6 +422,23 @@ export function AdminSidebar({
           );
         })}
       </div>
+
+      {/* ── Plan card ── */}
+      {showPlan && (!isCollapsed || isMobile) && (
+        <div className="mx-4 mb-2 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+          <p className="flex items-center gap-2 text-[15px] font-bold text-slate-900">
+            <Gem className="h-4 w-4 text-primary" strokeWidth={2.2} />
+            {!plan!.open ? 'দোকান বন্ধ আছে' : plan!.status === 'trial' ? 'ফ্রি ট্রায়াল' : 'প্ল্যানের মেয়াদ'}
+          </p>
+          <p className="mt-0.5 text-[13px] text-slate-500">
+            {!plan!.open ? 'পেমেন্ট করলেই আবার চালু হবে' : planDays !== null ? `আর ${String(Math.max(planDays, 0)).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[+d])} দিন বাকি` : ''}
+          </p>
+          <Link to="/admin/billing" onClick={() => { setTapped('/admin/billing'); if (isMobile && onCloseMobile) onCloseMobile(); }}
+            className="mt-3 flex items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-[14px] font-bold text-white transition-all hover:opacity-90 active:scale-[0.97]">
+            প্ল্যান আপগ্রেড করুন
+          </Link>
+        </div>
+      )}
 
       {/* ── User Profile Bottom ── */}
       <div className="shrink-0 p-4 border-t border-slate-200 mt-2">

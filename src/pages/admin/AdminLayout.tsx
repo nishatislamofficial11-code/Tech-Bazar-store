@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
+import { AdminPageSkeleton } from '../../components/ui/AdminPageSkeleton';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -83,6 +84,7 @@ export default function AdminLayout() {
           onToggleCollapse={() => {}}
           isMobile={true}
           onCloseMobile={() => setIsSidebarOpen(false)}
+          plan={myStore}
         />
       </div>
 
@@ -96,6 +98,7 @@ export default function AdminLayout() {
           isCollapsed={isCollapsed}
           onToggleCollapse={handleToggleCollapse}
           navRef={navRef}
+          plan={myStore}
         />
       </aside>
 
@@ -130,7 +133,9 @@ export default function AdminLayout() {
           className="flex-1 overflow-y-auto bg-white custom-scrollbar"
         >
           <div className="mx-auto max-w-7xl h-full p-4 lg:p-8">
-            <Outlet context={{ isSidebarCollapsed: isCollapsed }} />
+            <Suspense fallback={<><div className="admin-route-bar" aria-hidden="true" /><AdminPageSkeleton /></>}>
+              <Outlet context={{ isSidebarCollapsed: isCollapsed }} />
+            </Suspense>
           </div>
         </main>
 
