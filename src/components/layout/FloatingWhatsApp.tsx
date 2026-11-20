@@ -1,15 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
-import { MessageCircle, Send, Sparkles, UserRound, X } from 'lucide-react';
+import { Camera, MessageCircle, Send, Sparkles, UserRound, X } from 'lucide-react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { createWhatsAppUrl } from '../../lib/whatsapp';
 import { currentStoreSlug } from '../../lib/currentStore';
 import { buildCloudinaryUrl } from '../../lib/cloudinary';
-import type { ProductCard } from '../../lib/aiApi';
+import type { ChatAttachment, ProductCard } from '../../lib/aiApi';
 
-interface ChatMsg { id: string; role: 'customer' | 'ai' | 'agent'; content: string; attachments?: ProductCard[] | null }
+interface ChatMsg { id: string; role: 'customer' | 'ai' | 'agent'; content: string; attachments?: ChatAttachment[] | null }
 
-export function ProductCards({ cards }: { cards?: ProductCard[] | null }) {
-  if (!cards?.length) return null;
+export function ProductCards({ cards: all }: { cards?: ChatAttachment[] | null }) {
+  const photos = (all || []).filter((a): a is { type: 'image'; url: string } => a?.type === 'image');
+  const cards = (all || []).filter((a): a is ProductCard => a?.type === 'product');
+  if (photos.length) {
+    return (
+      <div className="mt-2 flex flex-wrap gap-2 justify-end">
+        {photos.map((p) => (
+          <a key={p.url} href={p.url} target="_blank" rel="noopener noreferrer">
+            <img src={buildCloudinaryUrl(p.url, 'w_300,c_limit,f_auto,q_auto')} alt="পাঠানো ছবি" loading="lazy" className="h-32 max-w-[180px] rounded-xl object-cover border border-gray-200" />
+          </a>
+        ))}
+      </div>
+    );
+  }
+  if (!cards.length) return null;
   return (
     <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
       {cards.map((c) => (
@@ -56,7 +69,7 @@ async function widgetApi(visitor: string, body: Record<string, unknown>) {
   return out;
 }
 
-function AiChatPanel({ shopName, onClose }: { shopName: string; onClose: () => void }) {
+function AiChatPanel({ shopName, onClose, upload }: { shopName: string; onClose: () => void; upload: { cloud: string; preset: string } | null }) {
   const visitor = useRef(visitorId()).current;
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [status, setStatus] = useState('ai');
@@ -64,6 +77,7 @@ function AiChatPanel({ shopName, onClose }: { shopName: string; onClose: () => v
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
   const bottom = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const loadHistory = async () => {
     try {
@@ -82,21 +96,47 @@ function AiChatPanel({ shopName, onClose }: { shopName: string; onClose: () => v
   }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { bottom.current?.scrollIntoView({ block: 'end' }); }, [messages.length, busy]);
 
-  const send = async () => {
+  const send = async (photo?: string) => {
     const msg = text.trim();
-    if (!msg || busy) return;
+    if ((!msg && !photo) || busy) return;
     setText('');
     setNote('');
-    setMessages((m) => [...m, { id: `local-${Date.now()}`, role: 'customer', content: msg }]);
+    setMessages((m) => [...m, { id: `local-${Date.now()}`, role: 'customer', content: msg || '📷 ছবি পাঠিয়েছেন', attachments: photo ? [{ type: 'image', url: photo }] : null }]);
     setBusy(true);
     try {
-      const out = await widgetApi(visitor, { action: 'send', message: msg });
+      const out = await widgetApi(visitor, { action: 'send', message: msg, photos: photo ? [photo] : [] });
       setStatus(out.status || 'ai');
       if (out.reply) setMessages((m) => [...m, { id: `ai-${Date.now()}`, role: 'ai', content: out.reply, attachments: out.attachments }]);
       else setNote(out.status === 'ai' ? 'আপনার মেসেজ পৌঁছেছে, শীঘ্রই উত্তর দেওয়া হবে।' : 'আপনার মেসেজ আমাদের প্রতিনিধির কাছে পৌঁছেছে, তিনি শীঘ্রই উত্তর দেবেন।');
     } catch (err) {
       setNote(err instanceof Error ? err.message : 'এখন উত্তর দেওয়া যাচ্ছে না');
     } finally { setBusy(false); }
+  };
+
+  // Photos go to the shop's own Cloudinary (the same place product photos are kept)
+  const sendPhoto = async (file: File | undefined) => {
+    if (!file || !upload || busy) return;
+    if (!file.type.startsWith('image/')) { setNote('শুধু ছবি পাঠানো যাবে'); return; }
+    if (file.size > 8 * 1024 * 1024) { setNote('ছবিটা অনেক বড় (৮ MB-এর কম দিন)'); return; }
+    setBusy(true);
+    setNote('ছবি আপলোড হচ্ছে…');
+    let url = '';
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('upload_preset', upload.preset);
+      form.append('folder', 'chat');
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${upload.cloud}/image/upload`, { method: 'POST', body: form });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.secure_url) throw new Error();
+      url = data.secure_url;
+    } catch {
+      setNote('ছবি পাঠানো যায়নি, আবার চেষ্টা করুন');
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+    if (url) await send(url);
   };
 
   const askHuman = async () => {
@@ -137,10 +177,17 @@ function AiChatPanel({ shopName, onClose }: { shopName: string; onClose: () => v
         <div ref={bottom} />
       </div>
       <div className="flex gap-2 p-3 border-t border-gray-100">
+        {upload && (
+          <>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => sendPhoto(e.target.files?.[0])} />
+            <button onClick={() => fileRef.current?.click()} disabled={busy} aria-label="ছবি পাঠান"
+              className="h-11 w-11 shrink-0 rounded-full border border-gray-200 text-gray-600 flex items-center justify-center disabled:opacity-40"><Camera className="h-5 w-5" /></button>
+          </>
+        )}
         <input value={text} maxLength={1000} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') send(); }}
           placeholder="প্রশ্ন লিখুন…" aria-label="প্রশ্ন লিখুন"
           className="flex-1 min-w-0 rounded-full border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:border-gray-400" />
-        <button onClick={send} disabled={busy || !text.trim()} aria-label="পাঠান"
+        <button onClick={() => send()} disabled={busy || !text.trim()} aria-label="পাঠান"
           className="h-11 w-11 shrink-0 rounded-full bg-gray-900 text-white flex items-center justify-center disabled:opacity-40"><Send className="h-4 w-4" /></button>
       </div>
     </div>
@@ -155,6 +202,8 @@ export function FloatingWhatsApp() {
   const waUrl = settings.floating_whatsapp_enabled === 'true'
     ? createWhatsAppUrl(settings.whatsapp_number, 'Hello, I need help with an order.') : null;
   const aiOn = settings.ai_web_chat_enabled === 'true';
+  const upload = settings.cloudinary_cloud_name && settings.cloudinary_upload_preset
+    ? { cloud: settings.cloudinary_cloud_name, preset: settings.cloudinary_upload_preset } : null;
   const shopName = settings.siteName || (settings as Record<string, string | undefined>).site_title || '';
 
   if (loading || (!waUrl && !aiOn)) return null;
@@ -175,7 +224,7 @@ export function FloatingWhatsApp() {
   const open = aiOpen || menu;
   return (
     <>
-      {aiOpen && <AiChatPanel shopName={shopName} onClose={() => setAiOpen(false)} />}
+      {aiOpen && <AiChatPanel shopName={shopName} onClose={() => setAiOpen(false)} upload={upload} />}
       {menu && !aiOpen && (
         <div className="fixed z-50 bottom-40 right-4 md:bottom-24 md:right-6 flex flex-col items-end gap-2">
           <a href={waUrl || '#'} target="_blank" rel="noopener noreferrer" onClick={() => setMenu(false)}
