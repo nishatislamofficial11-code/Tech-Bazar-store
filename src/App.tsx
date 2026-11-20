@@ -61,6 +61,10 @@ const MerchantSignup = lazy(() => import('./pages/merchant/MerchantSignup'));
 const MerchantLogin = lazy(() => import('./pages/merchant/MerchantLogin'));
 const MerchantReset = lazy(() => import('./pages/merchant/MerchantReset'));
 const AdminBilling = lazy(() => import('./pages/admin/Billing'));
+const AiInbox = lazy(() => import('./pages/admin/ai/AiInbox'));
+const AiKnowledge = lazy(() => import('./pages/admin/ai/AiKnowledge'));
+const AiSettings = lazy(() => import('./pages/admin/ai/AiSettings'));
+const AiConnections = lazy(() => import('./pages/admin/ai/AiConnections'));
 const SidebarMenu = lazy(() => import('./components/layout/SidebarMenu').then((m) => ({ default: m.SidebarMenu })));
 const SearchOverlay = lazy(() => import('./components/layout/SearchOverlay').then((m) => ({ default: m.SearchOverlay })));
 const CartDrawer = lazy(() => import('./components/layout/CartDrawer').then((m) => ({ default: m.CartDrawer })));
@@ -243,6 +247,10 @@ export default function App() {
                         <Route path="customize" element={<AdminCustomize />} />
                         <Route path="seo" element={<AdminSEO />} />
                         <Route path="billing" element={<AdminBilling />} />
+                        <Route path="ai/inbox" element={<AiInbox />} />
+                        <Route path="ai/knowledge" element={<AiKnowledge />} />
+                        <Route path="ai/settings" element={<AiSettings />} />
+                        <Route path="ai/connections" element={<AiConnections />} />
                       </Route>
 
                       {/* Public Feed Routes */}
