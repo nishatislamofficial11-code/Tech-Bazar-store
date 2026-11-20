@@ -55,7 +55,7 @@ h1,h2,h3{font-family:var(--body);line-height:1.2;margin:0;text-wrap:balance;font
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--bg)}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .2s}
 .top.scrolled{border-bottom-color:var(--line)}
-.top .in{display:flex;align-items:center;justify-content:space-between;gap:16px;height:68px}
+.top .bar-row{display:flex;align-items:center;justify-content:space-between;gap:16px;height:68px}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
 .brand svg{width:38px;height:38px;flex:none}
 .wm{font-family:var(--display);font-size:1.3rem;letter-spacing:-.03em;line-height:1;white-space:nowrap}
@@ -68,10 +68,13 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .menu-btn{display:none;background:none;border:1px solid var(--line);border-radius:12px;width:42px;height:42px;color:var(--fg);cursor:pointer}
 @media (max-width:860px){.nav,.top-cta .login{display:none}.menu-btn{display:inline-grid;place-items:center}}
 @media (max-width:420px){.top-cta .btn-primary{display:none}}
-.drawer{display:none;border-top:1px solid var(--line);background:var(--surface)}
+.drawer{display:none;border-top:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow)}
 .drawer.open{display:block}
-.drawer .in{display:grid;gap:4px;padding-block:12px 18px}
-.drawer a{padding:10px 4px;text-decoration:none;font-weight:600}
+.drawer .in{display:grid;padding-block:8px 18px}
+.drawer nav{display:grid}
+.drawer nav a{padding:13px 4px;text-decoration:none;font-weight:600;font-size:1.05rem;border-bottom:1px solid var(--line)}
+.drawer .drawer-cta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.drawer .drawer-cta .btn{justify-content:center}
 /* hero */
 .hero{padding-block:56px 40px;position:relative;overflow:hidden}
 .hero::before{content:"";position:absolute;inset:-30% -10% auto auto;width:720px;height:720px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--brand) 22%,transparent) 0%,transparent 65%);pointer-events:none}
@@ -179,8 +182,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .step h3{font-size:1.2rem}
 .step p{margin:0;color:var(--muted)}
 /* pricing */
-.price-wrap{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch}
-@media (max-width:860px){.price-wrap{grid-template-columns:1fr}}
+.price-wrap{display:grid;max-width:520px;margin:0 auto}
 .plan{background:var(--brand);color:#fff;border-radius:26px;padding:30px;display:grid;gap:16px;position:relative;overflow:hidden}
 .plan::before{content:"";position:absolute;right:-90px;top:-90px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.08)}
 .plan .free{justify-self:start;background:var(--orange);color:var(--orange-ink);font-weight:700;border-radius:999px;padding:5px 14px;font-size:.92rem}
@@ -249,7 +251,7 @@ footer a:hover{color:var(--brand)}
 </svg>
 
 <header class="top" id="top">
-  <div class="in">
+  <div class="in bar-row">
     <a class="brand" href="#hero" aria-label="Cloud Commerce হোম"><svg aria-hidden="true"><use href="#cc"/></svg><span class="wm"><b>cloud</b><span>commerce</span></span></a>
     <nav class="nav" aria-label="মূল মেনু">
       <a href="#features">ফিচার</a><a href="#how">কীভাবে শুরু</a><a href="#pricing">দাম</a><a href="#faq">প্রশ্নোত্তর</a>
@@ -262,8 +264,11 @@ footer a:hover{color:var(--brand)}
   </div>
   <div class="drawer" id="drawer">
     <div class="in">
-      <a href="#features">ফিচার</a><a href="#how">কীভাবে শুরু</a><a href="#pricing">দাম</a><a href="#faq">প্রশ্নোত্তর</a>
-      <a data-link="login" href="/merchant/login">লগইন</a>
+      <nav aria-label="মোবাইল মেনু"><a href="#features">ফিচার</a><a href="#how">কীভাবে শুরু</a><a href="#pricing">দাম</a><a href="#faq">প্রশ্নোত্তর</a></nav>
+      <div class="drawer-cta">
+        <a class="btn btn-ghost" data-link="login" href="/merchant/login">লগইন</a>
+        <a class="btn btn-primary" data-link="signup" href="/merchant/signup">ফ্রি শুরু করুন</a>
+      </div>
     </div>
   </div>
 </header>
@@ -431,14 +436,6 @@ footer a:hover{color:var(--brand)}
           </ul>
           <a class="btn" data-link="signup" href="/merchant/signup">ফ্রি শুরু করুন <svg><use href="#i-arrow"/></svg></a>
         </div>
-        <div class="after reveal">
-          <h3>৩০ দিন পরে কী হবে?</h3>
-          <ol>
-            <li><b>মেয়াদ শেষের আগেই জানাব।</b> এডমিন প্যানেলে আর ইমেইলে মনে করিয়ে দেওয়া হবে।</li>
-            <li><b>পেমেন্ট করলে সব চলতে থাকবে।</b> কোনো ডেটা হারাবে না।</li>
-            <li><b>পেমেন্ট না করলে দোকান ক্রেতাদের কাছে সাময়িক বন্ধ থাকবে।</b> তবে আপনার এডমিন প্যানেল, অর্ডার আর পণ্য সব আগের মতো থাকবে। টাকা দিলেই সাথে সাথে আবার চালু।</li>
-          </ol>
-        </div>
       </div>
     </div>
   </section>
@@ -452,7 +449,6 @@ footer a:hover{color:var(--brand)}
         <details class="reveal"><summary>অনলাইন পেমেন্টের টাকা কার কাছে যায়?</summary><p>সরাসরি আপনার নিজের SSLCommerz, aamarPay বা EPS মার্চেন্ট একাউন্টে। আমরা মাঝখানে টাকা ধরি না।</p></details>
         <details class="reveal"><summary>কোন কোন কুরিয়ার যুক্ত আছে?</summary><p>এখন Steadfast আর Pathao। অর্ডার থেকেই এক ক্লিকে পার্সেল বুক করা যায়।</p></details>
         <details class="reveal"><summary>আমার ডেটা কি নিরাপদ?</summary><p>প্রতিটা দোকানের ডেটা আলাদা রাখা হয়। এক দোকানের মালিক অন্য দোকানের কিছু দেখতে পারেন না, আর পেমেন্টের হিসাব শুধু সার্ভার যাচাই করে বদলায়।</p></details>
-        <details class="reveal"><summary>পরে কি প্ল্যান বাতিল করতে পারব?</summary><p>হ্যাঁ, কোনো চুক্তি নেই। পেমেন্ট না করলে দোকান শুধু ক্রেতাদের কাছে বন্ধ থাকবে।</p></details>
       </div>
     </div>
   </section>
