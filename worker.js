@@ -8,6 +8,7 @@ import { onRequest as track } from './functions/api/track.js';
 import { onRequest as otp } from './functions/api/otp.js';
 import { onRequest as aiChat } from './functions/api/ai-chat.js';
 import { onRequest as aiWidget } from './functions/api/ai-widget.js';
+import { onRequest as aiModels } from './functions/api/ai-models.js';
 import { onRequest as middleware } from './functions/_middleware.js';
 
 const routes = {
@@ -19,6 +20,7 @@ const routes = {
   '/api/otp': otp,
   '/api/ai-chat': aiChat,
   '/api/ai-widget': aiWidget,
+  '/api/ai-models': aiModels,
 };
 
 export default {

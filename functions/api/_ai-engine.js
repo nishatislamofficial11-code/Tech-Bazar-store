@@ -214,6 +214,20 @@ async function updateConversation(cfg, conv, patch) {
   });
 }
 
+// A failed AI call should not use up the shop's monthly replies
+async function refundReply(cfg, storeId) {
+  try {
+    const month = new Date(Date.now() + 6 * 3600_000).toISOString().slice(0, 7); // Asia/Dhaka (UTC+6)
+    const rows = await rest(cfg, `ai_usage?store_id=eq.${storeId}&month=eq.${month}&select=replies&limit=1`);
+    const used = Number(rows?.[0]?.replies || 0);
+    if (used > 0) {
+      await rest(cfg, `ai_usage?store_id=eq.${storeId}&month=eq.${month}`, {
+        method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ replies: used - 1 }),
+      });
+    }
+  } catch { /* not critical */ }
+}
+
 async function alertStaff(cfg, store, conv, reason) {
   const name = conv.customer_name || 'একজন কাস্টমার';
   await notifyStoreTelegram(cfg, store.id,
@@ -261,9 +275,13 @@ export async function handleCustomerMessage(cfg, store, conv, text) {
   try {
     out = await askAi(platform, ai, await shopContext(cfg, store, ai), (history || []).reverse());
   } catch (err) {
+    await refundReply(cfg, store.id);
     return handOff(`AI উত্তর দিতে পারেনি (${String(err?.message || err).slice(0, 120)})`, null);
   }
-  if (!out || typeof out.reply !== 'string' || !out.reply.trim()) return handOff('AI উত্তর দিতে পারেনি', null);
+  if (!out || typeof out.reply !== 'string' || !out.reply.trim()) {
+    await refundReply(cfg, store.id);
+    return handOff('AI উত্তর দিতে পারেনি', null);
+  }
 
   const sentiment = ['positive', 'neutral', 'negative'].includes(out.sentiment) ? out.sentiment : null;
   const summary = String(out.summary || '').slice(0, 300) || null;

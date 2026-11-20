@@ -32,6 +32,7 @@ export function AiSuperCard({ stores }: { stores: ShopLite[] }) {
   const [plans, setPlans] = useState<Record<string, ShopPlan>>({});
   const [usage, setUsage] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState('');
+  const [liveModels, setLiveModels] = useState<{ id: string; name: string }[]>([]);
   const current = PROVIDERS.find((p) => p.id === provider) || PROVIDERS[0];
 
   useEffect(() => {
@@ -53,7 +54,26 @@ export function AiSuperCard({ stores }: { stores: ShopLite[] }) {
 
   const pickProvider = (id: Provider) => {
     setProvider(id);
+    setLiveModels([]);
     setModel(PROVIDERS.find((p) => p.id === id)?.models[0] || '');
+  };
+
+  const fetchModels = async () => {
+    setBusy('models');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/ai-models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+        body: JSON.stringify({ provider, key: keys[current.keyName]?.trim() || '' }),
+      });
+      const out = await res.json().catch(() => null);
+      if (!res.ok || !out?.ok) throw new Error(out?.error || `HTTP ${res.status}`);
+      setLiveModels(out.models || []);
+      toast.success(`${(out.models || []).length}টা মডেল পাওয়া গেছে, নিচ থেকে বাছুন`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'মডেল তালিকা আনা যায়নি');
+    } finally { setBusy(''); }
   };
 
   const saveKey = async () => {
@@ -110,6 +130,20 @@ export function AiSuperCard({ stores }: { stores: ShopLite[] }) {
           <label htmlFor="ai-model" className="block text-xs text-slate-300 mb-1">মডেল <span className="text-slate-500">(তালিকা থেকে বাছুন বা নতুন মডেলের নাম লিখুন)</span></label>
           <input id="ai-model" list="ai-model-list" className={input} value={model} onChange={(e) => setModel(e.target.value)} placeholder={current.models[0]} />
           <datalist id="ai-model-list">{current.models.map((m) => <option key={m} value={m} />)}</datalist>
+          <button type="button" onClick={fetchModels} disabled={!!busy}
+            className="mt-2 w-full rounded-lg border border-slate-700 hover:border-emerald-500 text-slate-200 text-xs font-bold py-2 disabled:opacity-50">
+            {busy === 'models' ? 'আনা হচ্ছে…' : 'এই Key দিয়ে চালু থাকা মডেলের তালিকা আনুন'}
+          </button>
+          {liveModels.length > 0 && (
+            <div className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-slate-800 divide-y divide-slate-800">
+              {liveModels.map((m) => (
+                <button key={m.id} type="button" onClick={() => setModel(m.id)}
+                  className={`w-full text-left px-3 py-2 text-xs ${model === m.id ? 'bg-emerald-500/10 text-emerald-300' : 'text-slate-300 hover:bg-slate-800'}`}>
+                  <span className="font-mono">{m.id}</span>{m.name !== m.id && <span className="block text-[10px] text-slate-500">{m.name}</span>}
+                </button>
+              ))}
+            </div>
+          )}
           <p className="mt-1 text-[11px] text-slate-500">প্রথমটা সবচেয়ে সস্তা আর দ্রুত, চ্যাটের জন্য যথেষ্ট। বড় মডেল বেশি দামি।</p>
         </div>
         <button onClick={saveKey} disabled={!!busy} className="w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold py-2.5 text-sm">{busy === 'key' ? 'সেভ হচ্ছে…' : 'সেভ করুন'}</button>
