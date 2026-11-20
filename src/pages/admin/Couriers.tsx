@@ -17,6 +17,7 @@ import {
 } from '../../lib/pathaoApi';
 import { autoResolveBDLocation } from '../../lib/bdLocationMatcher';
 import { remainingBalance } from '../../lib/paymentRules';
+import CourierWebhookCard from '../../components/admin/CourierWebhookCard';
 
 export default function AdminCouriers() {
   const { settings, refreshSettings } = useSettings();
@@ -716,6 +717,8 @@ export default function AdminCouriers() {
               </div>
             </div>
           </div>
+
+          <CourierWebhookCard />
         </div>
       )}
 

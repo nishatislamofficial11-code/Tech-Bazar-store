@@ -113,9 +113,21 @@ export async function onRequest(context) {
       }
     }
 
-    // If new addition requested
+    // If new addition requested (rate-limited so nobody can flood a shop's blacklist)
     if (!trapped && (body.forceBlock || normPhone || deviceId)) {
+      const requester = String(context.request.headers.get('CF-Connecting-IP') || validIp || '').slice(0, 45);
+      const hourAgo = Date.now() - 60 * 60 * 1000;
+      const recent = list.filter(i => i && i.auto && Date.parse(i.addedAt || '') > hourAgo);
+      const fromRequester = requester ? recent.filter(i => i.src === requester).length : 0;
+      if (recent.length >= 30 || fromRequester >= 3) {
+        return new Response(JSON.stringify({ ok: false, error: 'Too many requests, try later' }), {
+          status: 429,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
       list.unshift({
+        auto: true,
+        src: requester || undefined,
         id: Math.random().toString(36).substring(2, 9),
         phone: cleanDigits,
         ip: validIp || undefined,
