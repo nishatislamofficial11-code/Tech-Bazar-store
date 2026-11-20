@@ -59,7 +59,7 @@ export async function onRequest(context) {
           expires_at: new Date(Date.now() + CODE_TTL_MIN * 60000).toISOString(),
         }]),
       });
-      await sendSms(context.env, phone, `Cloud Commerce: আপনার যাচাই কোড ${code}। ${CODE_TTL_MIN} মিনিট পর্যন্ত কাজ করবে। কাউকে এই কোড বলবেন না।`);
+      await sendSms(context.env, phone, `Your Cloud Commerce code is ${code}. Valid for ${CODE_TTL_MIN} minutes. Do not share it with anyone.`);
       return json({ ok: true, ttl: CODE_TTL_MIN * 60 });
     }
 
