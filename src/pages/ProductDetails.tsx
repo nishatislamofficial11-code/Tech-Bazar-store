@@ -214,7 +214,7 @@ export default function ProductDetails() {
     const fetchReviews = async () => {
       if (product?.id) {
         setReviewsLoading(true);
-        const { data } = await supabase.from('reviews').select('*').eq('product_id', product.id).eq('status', 'approved').order('created_at', { ascending: false });
+        const { data } = await supabase.from('reviews').select('id, product_id, user_id, name, rating, content, status, created_at').eq('product_id', product.id).eq('status', 'approved').order('created_at', { ascending: false });
         if (data) setReviews(data);
         setReviewsLoading(false);
       }

@@ -7,6 +7,8 @@ import { getCachedData, setCachedData } from '../lib/cache';
 import { SEO } from '../components/SEO';
 import toast from 'react-hot-toast';
 import { useCart } from '../contexts/CartContext';
+import { readPendingPayment, forgetPendingPayment, startOnlinePayment } from '../lib/checkoutOrder';
+import { trackPurchase, saveCachedUserData } from '../lib/fbPixel';
 
 const CategoryGrid = lazy(() => import('../components/home/CategoryGrid').then(m => ({ default: m.CategoryGrid })));
 const ProductSection = lazy(() => import('../components/home/ProductSection').then(m => ({ default: m.ProductSection })));
@@ -65,31 +67,52 @@ export default function HomePage() {
     const params = new URLSearchParams(window.location.search);
     const outcome = params.get('payment');
     if (!outcome) return;
-    const id = params.get('order');
-    if (outcome === 'success' && id) {
-      const pending = localStorage.getItem(`pending_payment:${id}`);
-      if (pending) {
-        void (async () => {
-          try {
-            const record = JSON.parse(pending);
-            const { data, error } = await supabase.rpc('checkout_order_status', { target_order: id, token: record.token });
-            if (error || !data || !['paid', 'partial'].includes(data.payment_status)) throw new Error('Payment not verified');
-            const cart = JSON.parse(localStorage.getItem('shopping_cart') || '[]');
-            for (const purchased of record.items || []) {
-              const item = cart.find((entry: any) => (entry.product.cartItemKey || entry.product.id) === purchased.key);
-              if (!item) continue;
-              if (item.quantity > purchased.quantity) updateQuantity(purchased.key, item.quantity - purchased.quantity);
-              else removeFromCart(purchased.key);
-            }
-            localStorage.removeItem(`pending_payment:${id}`);
-            toast.success('আপনার পেমেন্ট যাচাই হয়েছে!');
-          } catch { toast.error('পেমেন্ট নিশ্চিত করা যায়নি; অর্ডারের অবস্থা দেখুন।'); }
-        })();
-      }
-    } else if (outcome === 'failed') toast.error('পেমেন্ট ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+    const id = params.get('order') || '';
+    const reason = params.get('reason') || '';
+    const pending = id ? readPendingPayment(id) : null;
+
+    if (outcome === 'success' && id && pending) {
+      void (async () => {
+        try {
+          const { data, error } = await supabase.rpc('checkout_order_status', { target_order: id, token: pending.token });
+          if (error || !data || !['paid', 'partial'].includes(data.payment_status)) throw new Error('Payment not verified');
+          const cart = JSON.parse(localStorage.getItem('shopping_cart') || '[]');
+          for (const purchased of pending.items || []) {
+            const item = cart.find((entry: any) => (entry.product.cartItemKey || entry.product.id) === purchased.key);
+            if (!item) continue;
+            if (item.quantity > purchased.quantity) updateQuantity(purchased.key, item.quantity - purchased.quantity);
+            else removeFromCart(purchased.key);
+          }
+          if (pending.purchase) {
+            saveCachedUserData(pending.purchase.customer);
+            trackPurchase(pending.purchase.pixel, pending.purchase.customer);
+          }
+          forgetPendingPayment(id);
+          toast.success('আপনার পেমেন্ট যাচাই হয়েছে! অর্ডার নিশ্চিত হয়েছে।');
+        } catch { toast.error('পেমেন্ট নিশ্চিত করা যায়নি; অর্ডারের অবস্থা দেখুন।'); }
+      })();
+    } else if ((outcome === 'failed' || outcome === 'cancelled') && id && pending) {
+      const title = outcome === 'cancelled' ? 'পেমেন্ট বাতিল করা হয়েছে।' : 'পেমেন্ট সম্পন্ন হয়নি।';
+      toast((t) => (
+        <div className="space-y-2 text-sm">
+          <p className="font-semibold">{title}</p>
+          {reason && <p className="opacity-70">{reason}</p>}
+          <p>আপনার অর্ডার সংরক্ষিত আছে। আবার পেমেন্ট করতে পারেন।</p>
+          <div className="flex gap-2">
+            <button type="button" className="rounded-md bg-primary px-3 py-1.5 font-semibold text-white"
+              onClick={() => { toast.dismiss(t.id); toast.loading('পেমেন্ট পেজ খোলা হচ্ছে…'); void startOnlinePayment({ id, checkout_token: pending.token }); }}>
+              আবার পেমেন্ট করুন
+            </button>
+            <button type="button" className="rounded-md border px-3 py-1.5" onClick={() => toast.dismiss(t.id)}>পরে</button>
+          </div>
+        </div>
+      ), { duration: 60000 });
+    } else if (outcome === 'failed') toast.error(reason || 'পেমেন্ট ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
     else if (outcome === 'cancelled') toast.error('পেমেন্ট বাতিল করা হয়েছে।');
+
     params.delete('payment');
     params.delete('order');
+    params.delete('reason');
     const qs = params.toString();
     window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
   }, []);
