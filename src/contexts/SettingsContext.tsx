@@ -28,6 +28,7 @@ interface SiteSettings {
   whatsapp_number?: string;
   product_whatsapp_enabled?: string;
   floating_whatsapp_enabled?: string;
+  ai_web_chat_enabled?: string;
   call_order_enabled?: string;
   call_order_number?: string;
   delivery_charge_type?: string;

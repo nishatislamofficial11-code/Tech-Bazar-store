@@ -5,7 +5,7 @@ export type AiStatus = 'ai' | 'needs_human' | 'assigned' | 'resolved';
 
 export interface AiConversation {
   id: string;
-  channel: 'test' | 'messenger' | 'instagram' | 'whatsapp';
+  channel: 'test' | 'website' | 'messenger' | 'instagram' | 'whatsapp';
   customer_name: string | null;
   customer_phone: string | null;
   status: AiStatus;
@@ -42,10 +42,11 @@ export async function aiChatApi<T = Record<string, unknown>>(body: Record<string
 }
 
 export const CHANNEL_LABEL: Record<AiConversation['channel'], string> = {
-  test: 'Test', messenger: 'Messenger', instagram: 'Instagram', whatsapp: 'WhatsApp',
+  test: 'Test', website: 'Website', messenger: 'Messenger', instagram: 'Instagram', whatsapp: 'WhatsApp',
 };
 export const CHANNEL_STYLE: Record<AiConversation['channel'], string> = {
   test: 'bg-slate-100 text-slate-600',
+  website: 'bg-violet-50 text-violet-600',
   messenger: 'bg-blue-50 text-blue-600',
   instagram: 'bg-pink-50 text-pink-600',
   whatsapp: 'bg-emerald-50 text-emerald-600',
