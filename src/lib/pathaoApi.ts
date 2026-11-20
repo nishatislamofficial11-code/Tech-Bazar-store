@@ -81,9 +81,14 @@ async function callPathaoProxy(action: string, payload?: any, config?: PathaoCon
     }
   } catch (err: any) {
     // If it's a real API rejection message from Pathao, throw it
-    if (err.message && !err.message.includes('Unexpected token') && !err.message.includes('is not valid JSON') && !err.message.includes('JSON')) {
+    if (!(err instanceof TypeError) && err.message && !err.message.includes('Unexpected token') && !err.message.includes('is not valid JSON') && !err.message.includes('JSON')) {
       throw err;
     }
+  }
+
+  // On the live site the server proxy is the only route: say so clearly instead of trying a dev-only path
+  if (!import.meta.env.DEV) {
+    throw new Error('কুরিয়ার সার্ভারের সাথে সংযোগ হচ্ছে না। ইন্টারনেট চেক করে একটু পরে আবার চেষ্টা করুন।');
   }
 
   // 2. Fallback for Localhost (Vite dev server) using Vite reverse proxy
