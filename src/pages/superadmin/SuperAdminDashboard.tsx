@@ -16,6 +16,10 @@ interface StoreRow extends PlanInfo {
 }
 
 
+const TABS: ['stores' | 'new' | 'plan' | 'sms' | 'landing', string][] = [
+  ['stores', 'সব দোকান'], ['new', 'নতুন দোকান'], ['plan', 'সাইন আপ ও প্ল্যান'], ['sms', 'SMS'], ['landing', 'ল্যান্ডিং পেজ'],
+];
+
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState(false);
@@ -24,6 +28,8 @@ export default function SuperAdminDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const filteredStores: StoreRow[] = filterStores<StoreRow>(stores, search);
+  const [tab, setTab] = useState<'stores' | 'new' | 'plan' | 'sms' | 'landing'>('stores');
+  const pendingCount = stores.filter((s) => s.status === 'pending').length;
 
 
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -197,12 +203,19 @@ export default function SuperAdminDashboard() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-        <PlatformSettingsCard />
-        <SmsSettingsCard />
-        <LandingSettingsCard />
-        <SuperCreateStoreForm onCreated={loadStores} />
+      <main className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+        <nav aria-label="সুপার এডমিন অংশ" className="-mx-4 overflow-x-auto px-4">
+          <div className="flex w-max gap-2">
+            {TABS.map(([key, label]) => (
+              <button key={key} type="button" onClick={() => setTab(key)} aria-pressed={tab === key}
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold border transition-colors ${tab === key ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'border-slate-700 text-slate-300 hover:border-slate-500'}`}>
+                {label}{key === 'stores' && pendingCount > 0 && <span className="ml-1.5 rounded-full bg-amber-400 px-1.5 text-[11px] text-slate-950">{pendingCount}</span>}
+              </button>
+            ))}
+          </div>
+        </nav>
 
+        {tab === 'stores' && (
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-bold flex items-center gap-2">
@@ -346,6 +359,11 @@ export default function SuperAdminDashboard() {
             </div>
           )}
         </section>
+        )}
+        {tab === 'new' && <SuperCreateStoreForm onCreated={() => { loadStores(); }} />}
+        {tab === 'plan' && <PlatformSettingsCard />}
+        {tab === 'sms' && <SmsSettingsCard />}
+        {tab === 'landing' && <LandingSettingsCard />}
       </main>
     </div>
   );
