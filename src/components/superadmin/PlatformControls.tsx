@@ -71,7 +71,7 @@ export function PlanActions({ storeId, s, onDone }: { storeId: string; s: PlanIn
 
 // Platform-wide settings: how sign-ups work, trial length and the plan shown to owners
 export function PlatformSettingsCard() {
-  const [vals, setVals] = useState({ signup_mode: 'auto', trial_days: '30', plan_name: 'Cloud Commerce', plan_price: '' });
+  const [vals, setVals] = useState({ signup_mode: 'auto', trial_days: '30', plan_name: 'Cloud Commerce', plan_price: '', phone_verification: 'on' });
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     supabase.from('platform_settings').select('key, value').then(({ data }) => {
@@ -100,6 +100,15 @@ export function PlatformSettingsCard() {
           ))}
         </div>
       </div>
+      <div>
+        <p className="block text-xs text-slate-300 mb-1.5">সাইন আপে মোবাইল নম্বর যাচাই (SMS কোড)</p>
+        <div className="grid grid-cols-2 gap-2" role="group" aria-label="মোবাইল যাচাই">
+          {[['on', 'চালু'], ['off', 'বন্ধ']].map(([k, l]) => (
+            <button key={k} type="button" aria-pressed={vals.phone_verification === k} onClick={() => setVals({ ...vals, phone_verification: k })}
+              className={`rounded-lg px-3 py-2.5 text-sm font-bold border ${vals.phone_verification === k ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'border-slate-700 text-slate-300'}`}>{l}</button>
+          ))}
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <div><label htmlFor="ps-days" className="block text-xs text-slate-300 mb-1">ফ্রি ট্রায়াল (দিন)</label>
           <input id="ps-days" inputMode="numeric" className={input} value={vals.trial_days} onChange={(e) => setVals({ ...vals, trial_days: e.target.value.replace(/\D/g, '') })} /></div>
@@ -109,6 +118,97 @@ export function PlatformSettingsCard() {
       <div><label htmlFor="ps-name" className="block text-xs text-slate-300 mb-1">প্ল্যানের নাম</label>
         <input id="ps-name" className={input} value={vals.plan_name} onChange={(e) => setVals({ ...vals, plan_name: e.target.value })} /></div>
       <button onClick={save} disabled={saving} className="w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold py-2.5 text-sm">{saving ? 'সেভ হচ্ছে…' : 'সেভ করুন'}</button>
+    </section>
+  );
+}
+
+// Landing page content: everything visitors see on the Cloud Commerce site
+const LANDING_FIELDS: { key: string; label: string; hint?: string; long?: boolean; group: string }[] = [
+  { group: 'প্রথম অংশ (হিরো)', key: 'landing_badge', label: 'ছোট ব্যাজ', hint: 'বাংলাদেশি ব্যবসার জন্য বানানো' },
+  { group: 'প্রথম অংশ (হিরো)', key: 'landing_hero_title', label: 'শিরোনাম', hint: 'এক প্ল্যাটফর্মে আপনার' },
+  { group: 'প্রথম অংশ (হিরো)', key: 'landing_hero_highlight', label: 'শিরোনামের রঙিন অংশ', hint: 'পুরো অনলাইন ব্যবসা' },
+  { group: 'প্রথম অংশ (হিরো)', key: 'landing_hero_subtitle', label: 'নিচের বর্ণনা', long: true },
+  { group: 'প্রথম অংশ (হিরো)', key: 'demo_store_slug', label: 'ডেমো দোকানের লিংক-নাম', hint: 'techbazar' },
+  { group: 'যোগাযোগ', key: 'contact_phone', label: 'ফোন নম্বর', hint: '01XXXXXXXXX' },
+  { group: 'যোগাযোগ', key: 'contact_whatsapp', label: 'WhatsApp নম্বর', hint: '01XXXXXXXXX' },
+  { group: 'যোগাযোগ', key: 'contact_email', label: 'ইমেইল' },
+  { group: 'যোগাযোগ', key: 'contact_address', label: 'অফিসের ঠিকানা', long: true },
+  { group: 'যোগাযোগ', key: 'office_hours', label: 'অফিস সময়', hint: 'শনি–বৃহস্পতি, সকাল ১০টা–সন্ধ্যা ৭টা' },
+  { group: 'সোশ্যাল মিডিয়া', key: 'social_facebook', label: 'Facebook পেজ লিংক', hint: 'https://facebook.com/...' },
+  { group: 'সোশ্যাল মিডিয়া', key: 'social_youtube', label: 'YouTube লিংক', hint: 'https://youtube.com/...' },
+  { group: 'সোশ্যাল মিডিয়া', key: 'social_instagram', label: 'Instagram লিংক', hint: 'https://instagram.com/...' },
+  { group: 'সোশ্যাল মিডিয়া', key: 'social_tiktok', label: 'TikTok লিংক', hint: 'https://tiktok.com/@...' },
+  { group: 'ফুটার', key: 'footer_about', label: 'আমাদের সম্পর্কে (ছোট লেখা)', long: true },
+];
+
+export function LandingSettingsCard() {
+  const [vals, setVals] = useState<Record<string, string>>({});
+  const [faq, setFaq] = useState<{ q: string; a: string }[]>([]);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    supabase.from('platform_settings').select('key, value').then(({ data }) => {
+      if (!data) return;
+      const map = Object.fromEntries(data.map((r: { key: string; value: string }) => [r.key, r.value]));
+      setVals(map);
+      try { const f = JSON.parse(map.landing_faq || '[]'); if (Array.isArray(f)) setFaq(f); } catch { /* keep empty */ }
+    });
+  }, []);
+  const save = async () => {
+    for (const k of ['social_facebook', 'social_youtube', 'social_instagram', 'social_tiktok']) {
+      const v = (vals[k] || '').trim();
+      if (v && !/^https?:\/\//i.test(v)) { toast.error('সোশ্যাল লিংক https:// দিয়ে শুরু করুন'); return; }
+    }
+    setSaving(true);
+    const now = new Date().toISOString();
+    const rows = LANDING_FIELDS.map(({ key }) => ({ key, value: (vals[key] || '').trim(), updated_at: now }));
+    rows.push({ key: 'landing_faq', value: JSON.stringify(faq.filter((f) => f.q.trim() && f.a.trim())), updated_at: now });
+    const { error } = await supabase.from('platform_settings').upsert(rows, { onConflict: 'key' });
+    setSaving(false);
+    if (error) toast.error(error.message); else toast.success('ল্যান্ডিং পেজ আপডেট হয়েছে');
+  };
+  const input = 'w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500';
+  const groups = [...new Set(LANDING_FIELDS.map((f) => f.group))];
+  return (
+    <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
+      <div>
+        <h2 className="text-base font-bold flex items-center gap-2"><Settings2 className="h-5 w-5 text-emerald-400" />ল্যান্ডিং পেজের তথ্য</h2>
+        <p className="mt-1 text-xs text-slate-400">খালি রাখলে আগের লেখাটাই দেখাবে। সেভ করলেই সাইটে বদলে যাবে।</p>
+      </div>
+      {groups.map((g) => (
+        <div key={g} className="space-y-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-emerald-400">{g}</p>
+          {LANDING_FIELDS.filter((f) => f.group === g).map((f) => (
+            <div key={f.key}>
+              <label htmlFor={`lp-${f.key}`} className="block text-xs text-slate-300 mb-1">{f.label}</label>
+              {f.long ? (
+                <textarea id={`lp-${f.key}`} rows={3} className={input} value={vals[f.key] || ''} placeholder={f.hint}
+                  onChange={(e) => setVals({ ...vals, [f.key]: e.target.value })} />
+              ) : (
+                <input id={`lp-${f.key}`} className={input} value={vals[f.key] || ''} placeholder={f.hint}
+                  onChange={(e) => setVals({ ...vals, [f.key]: e.target.value })} />
+              )}
+            </div>
+          ))}
+        </div>
+      ))}
+      <div className="space-y-3">
+        <p className="text-xs font-bold uppercase tracking-wide text-emerald-400">প্রশ্নোত্তর (FAQ)</p>
+        <p className="text-xs text-slate-400">কোনো প্রশ্ন না দিলে পেজের আগের প্রশ্নগুলোই দেখাবে।</p>
+        {faq.map((f, i) => (
+          <div key={i} className="space-y-2 rounded-lg border border-slate-700 p-3">
+            <input aria-label={`প্রশ্ন ${i + 1}`} className={input} value={f.q} placeholder="প্রশ্ন"
+              onChange={(e) => setFaq(faq.map((x, j) => (j === i ? { ...x, q: e.target.value } : x)))} />
+            <textarea aria-label={`উত্তর ${i + 1}`} rows={2} className={input} value={f.a} placeholder="উত্তর"
+              onChange={(e) => setFaq(faq.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)))} />
+            <button type="button" onClick={() => setFaq(faq.filter((_, j) => j !== i))} className="text-xs font-bold text-red-300">মুছে ফেলুন</button>
+          </div>
+        ))}
+        <button type="button" onClick={() => setFaq([...faq, { q: '', a: '' }])} className="w-full rounded-lg border border-dashed border-slate-600 py-2.5 text-sm font-bold text-slate-300">+ নতুন প্রশ্ন যোগ করুন</button>
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button onClick={save} disabled={saving} className="flex-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold py-2.5 text-sm">{saving ? 'সেভ হচ্ছে…' : 'ল্যান্ডিং পেজ সেভ করুন'}</button>
+        <a href="/platform/" target="_blank" rel="noopener noreferrer" className="flex-1 rounded-lg border border-slate-700 py-2.5 text-center text-sm font-bold text-slate-200">পেজ দেখুন</a>
+      </div>
     </section>
   );
 }

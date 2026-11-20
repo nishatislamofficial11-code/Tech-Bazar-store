@@ -221,6 +221,14 @@ footer ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 footer a{text-decoration:none}
 footer a:hover{color:var(--brand)}
 .copy{border-top:1px solid var(--line);margin-top:28px;padding-top:18px;font-size:.88rem}
+.contact li{display:grid;gap:0}
+.contact li span{font-size:.8rem;text-transform:none;color:var(--muted)}
+.contact li a,.contact li b{color:var(--fg);font-weight:600;word-break:break-word}
+.social{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.social a{display:inline-flex;align-items:center;justify-content:center;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);font-weight:600;font-size:.85rem;color:var(--fg)}
+.social a:hover{border-color:var(--brand);color:var(--brand)}
+.wa{position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40;width:52px;height:52px;border-radius:50%;background:#25d366;display:grid;place-items:center;box-shadow:0 10px 24px -8px rgba(0,0,0,.35)}
+.wa svg{width:28px;height:28px;color:#fff}
 /* floating CTA (phones) */
 .float-cta{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40;transform:translateY(140%);transition:transform .35s cubic-bezier(.2,.8,.2,1)}
 .float-cta.show{transform:none}
@@ -277,11 +285,11 @@ footer a:hover{color:var(--brand)}
   <section class="hero" id="hero">
     <div class="in">
       <div>
-        <span class="badge"><i></i>বাংলাদেশি ব্যবসার জন্য বানানো</span>
-        <h1>এক প্ল্যাটফর্মে আপনার <em>পুরো অনলাইন ব্যবসা</em></h1>
-        <p class="sub">দোকানের ওয়েবসাইট, অর্ডার, কুরিয়ার, অনলাইন পেমেন্ট আর ফেসবুক পিক্সেল, সব এক জায়গা থেকে চালান। কোডিং জানার দরকার নেই।</p>
+        <span class="badge"><i></i><span data-cms="landing_badge">বাংলাদেশি ব্যবসার জন্য বানানো</span></span>
+        <h1><span data-cms="landing_hero_title">এক প্ল্যাটফর্মে আপনার</span> <em data-cms="landing_hero_highlight">পুরো অনলাইন ব্যবসা</em></h1>
+        <p class="sub" data-cms="landing_hero_subtitle">দোকানের ওয়েবসাইট, অর্ডার, কুরিয়ার, অনলাইন পেমেন্ট আর ফেসবুক পিক্সেল, সব এক জায়গা থেকে চালান। কোডিং জানার দরকার নেই।</p>
         <div class="ctas">
-          <a class="btn btn-primary" data-link="signup" href="/merchant/signup">৩০ দিন ফ্রি শুরু করুন <svg><use href="#i-arrow"/></svg></a>
+          <a class="btn btn-primary" data-link="signup" href="/merchant/signup"><span class="trial-days">৩০</span> দিন ফ্রি শুরু করুন <svg><use href="#i-arrow"/></svg></a>
           <a class="btn btn-ghost" data-link="demo" href="/?store=techbazar">ডেমো দোকান দেখুন</a>
         </div>
         <div class="fine">
@@ -312,7 +320,7 @@ footer a:hover{color:var(--brand)}
 
   <section class="counters" aria-label="প্ল্যাটফর্মে যা পাবেন">
     <div class="in">
-      <div class="counter"><strong><span data-count="30">30</span> দিন</strong><span>সম্পূর্ণ ফ্রি ট্রায়াল</span></div>
+      <div class="counter"><strong><span data-count="30" id="trialCount">30</span> দিন</strong><span>সম্পূর্ণ ফ্রি ট্রায়াল</span></div>
       <div class="counter"><strong data-count="3">3</strong><span>অনলাইন পেমেন্ট গেটওয়ে</span></div>
       <div class="counter"><strong data-count="2">2</strong><span>কুরিয়ারের সাথে সরাসরি সংযোগ</span></div>
       <div class="counter"><strong data-count="4">4</strong><span>পেমেন্টের ধরন (COD থেকে ফুল পেমেন্ট)</span></div>
@@ -407,7 +415,7 @@ footer a:hover{color:var(--brand)}
         <p>ডিজাইন বা প্রোগ্রামিং শেখার দরকার নেই। আমরা সব সহজ করে রেখেছি।</p>
       </div>
       <div class="steps">
-        <div class="step reveal"><span class="n">ধাপ ১</span><h3>একাউন্ট খুলুন</h3><p>নাম, ফোন, ইমেইল আর দোকানের নাম দিন। ইমেইল যাচাই করলেই ৩০ দিনের ফ্রি ট্রায়াল শুরু।</p></div>
+        <div class="step reveal"><span class="n">ধাপ ১</span><h3>একাউন্ট খুলুন</h3><p>নাম, ফোন, ইমেইল আর দোকানের নাম দিন। ইমেইল যাচাই করলেই <span class="trial-days">৩০</span> দিনের ফ্রি ট্রায়াল শুরু।</p></div>
         <div class="step reveal"><span class="n">ধাপ ২</span><h3>দোকান সাজান</h3><p>লোগো, রঙ, ডেলিভারি চার্জ ঠিক করুন আর পণ্য যোগ করুন ছবি ও দামসহ।</p></div>
         <div class="step reveal"><span class="n">ধাপ ৩</span><h3>বিক্রি শুরু করুন</h3><p>দোকানের লিংক ফেসবুকে শেয়ার করুন। অর্ডার এলেই টেলিগ্রামে খবর পাবেন।</p></div>
       </div>
@@ -419,11 +427,11 @@ footer a:hover{color:var(--brand)}
       <div class="sec-head reveal">
         <span class="eyebrow">Pricing</span>
         <h2>সহজ দাম, কোনো লুকানো খরচ নেই</h2>
-        <p>একটাই প্ল্যান, সব ফিচারসহ। প্রথম ৩০ দিন পুরোপুরি ফ্রি।</p>
+        <p>একটাই প্ল্যান, সব ফিচারসহ। প্রথম <span class="trial-days">৩০</span> দিন পুরোপুরি ফ্রি।</p>
       </div>
       <div class="price-wrap">
         <div class="plan reveal">
-          <span class="free">প্রথম ৩০ দিন ফ্রি</span>
+          <span class="free">প্রথম <span class="trial-days">৩০</span> দিন ফ্রি</span>
           <h3>Cloud Commerce প্ল্যান</h3>
           <div class="amount" id="priceAmount">৳ — <small>/ মাস</small></div>
           <ul>
@@ -443,8 +451,8 @@ footer a:hover{color:var(--brand)}
   <section class="sec" id="faq" style="padding-top:0">
     <div class="in">
       <div class="sec-head reveal"><span class="eyebrow">FAQ</span><h2>যা জানতে চান</h2></div>
-      <div class="faq">
-        <details class="reveal"><summary>ফ্রি ট্রায়ালের জন্য কি কার্ড বা টাকা লাগবে?</summary><p>না। শুধু একাউন্ট খুলুন, ৩০ দিন সব ফিচার ফ্রি ব্যবহার করুন।</p></details>
+      <div class="faq" id="faqList">
+        <details class="reveal"><summary>ফ্রি ট্রায়ালের জন্য কি কার্ড বা টাকা লাগবে?</summary><p>না। শুধু একাউন্ট খুলুন, <span class="trial-days">৩০</span> দিন সব ফিচার ফ্রি ব্যবহার করুন।</p></details>
         <details class="reveal"><summary>আমার কি নিজের ওয়েবসাইট বা হোস্টিং লাগবে?</summary><p>না। দোকান আমাদের সার্ভারেই চলে। আপনি শুধু পণ্য যোগ করবেন আর বিক্রি করবেন।</p></details>
         <details class="reveal"><summary>অনলাইন পেমেন্টের টাকা কার কাছে যায়?</summary><p>সরাসরি আপনার নিজের SSLCommerz, aamarPay বা EPS মার্চেন্ট একাউন্টে। আমরা মাঝখানে টাকা ধরি না।</p></details>
         <details class="reveal"><summary>কোন কোন কুরিয়ার যুক্ত আছে?</summary><p>এখন Steadfast আর Pathao। অর্ডার থেকেই এক ক্লিকে পার্সেল বুক করা যায়।</p></details>
@@ -458,7 +466,7 @@ footer a:hover{color:var(--brand)}
       <div class="closing reveal">
         <svg class="bg" viewBox="0 0 64 64" aria-hidden="true"><path d="M32.1 24.9A10 10 0 1 0 32.1 39.1" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M47.1 24.9A10 10 0 1 0 47.1 39.1" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>
         <h2>আজই আপনার অনলাইন দোকান খুলুন</h2>
-        <p>৫ মিনিটে সেটআপ, ৩০ দিন ফ্রি। কোনো কার্ড লাগবে না।</p>
+        <p>৫ মিনিটে সেটআপ, <span class="trial-days">৩০</span> দিন ফ্রি। কোনো কার্ড লাগবে না।</p>
         <a class="btn btn-primary" data-link="signup" href="/merchant/signup">ফ্রি শুরু করুন <svg><use href="#i-arrow"/></svg></a>
       </div>
     </div>
@@ -469,31 +477,75 @@ footer a:hover{color:var(--brand)}
   <div class="in">
     <div>
       <a class="brand" href="#hero"><svg aria-hidden="true" style="width:34px;height:34px"><use href="#cc"/></svg><span class="wm" style="color:var(--fg)"><b>cloud</b><span>commerce</span></span></a>
-      <p style="margin:12px 0 0;max-width:40ch">বাংলাদেশি ব্যবসার জন্য অনলাইন দোকানের প্ল্যাটফর্ম।</p>
+      <p style="margin:12px 0 0;max-width:40ch" data-cms="footer_about">বাংলাদেশি ব্যবসার জন্য অনলাইন দোকানের প্ল্যাটফর্ম।</p>
     </div>
     <div><h4>প্ল্যাটফর্ম</h4><ul><li><a href="#features">ফিচার</a></li><li><a href="#pricing">দাম</a></li><li><a href="#faq">প্রশ্নোত্তর</a></li><li><a data-link="login" href="/merchant/login">লগইন</a></li></ul></div>
-    <div><h4>যোগাযোগ</h4><ul><li id="contactPhone">ফোন: শীঘ্রই</li><li id="contactEmail">ইমেইল: শীঘ্রই</li></ul></div>
+    <div><h4>যোগাযোগ</h4><ul class="contact" id="contactList">
+        <li data-c="contact_phone" hidden><span>ফোন</span><a></a></li>
+        <li data-c="contact_whatsapp" hidden><span>WhatsApp</span><a target="_blank" rel="noopener"></a></li>
+        <li data-c="contact_email" hidden><span>ইমেইল</span><a></a></li>
+        <li data-c="contact_address" hidden><span>ঠিকানা</span><b></b></li>
+        <li data-c="office_hours" hidden><span>অফিস সময়</span><b></b></li>
+        <li id="contactSoon">শীঘ্রই যুক্ত হবে</li>
+      </ul>
+      <div class="social" id="socialRow" hidden></div></div>
   </div>
   <div class="in"><div class="copy">© <span id="year">2026</span> Cloud Commerce</div></div>
 </footer>
 
+<a class="wa" id="waFloat" href="#" target="_blank" rel="noopener" aria-label="WhatsApp-এ মেসেজ দিন" hidden><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.6.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.6-.3z"/></svg></a>
 <a class="btn btn-primary float-cta" id="floatCta" data-link="signup" href="/merchant/signup">ফ্রি শুরু করুন <svg><use href="#i-arrow"/></svg></a>
 
 <script>
-/* ---- Settings: fill these in when ready ---- */
-const SITE = {
-  price: null,            // e.g. 999  → shows "৳৯৯৯ / মাস"
-  phone: null,            // e.g. '01XXXXXXXXX'
-  email: null,            // e.g. 'hello@cloudcommerce.com'
-};
-
+/* ---- Live content: everything below is editable from the super admin panel ---- */
+const SUPA = { url: 'https://tvfhsgokbwekpfyrmhbl.supabase.co', key: 'sb_publishable_F2Vql83Ewz488LnbxNFkQQ_61zuR9PS' };
 const bnDigits = s => String(s).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
 const bnMoney = n => bnDigits(Number(n).toLocaleString('en-IN'));
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const esc = v => String(v).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-if (SITE.price) document.getElementById('priceAmount').innerHTML = `৳${bnMoney(SITE.price)} <small>/ মাস</small>`;
-if (SITE.phone) document.getElementById('contactPhone').textContent = 'ফোন: ' + bnDigits(SITE.phone);
-if (SITE.email) document.getElementById('contactEmail').textContent = 'ইমেইল: ' + SITE.email;
+function applyCms(c){
+  document.querySelectorAll('[data-cms]').forEach(el => { const v = (c[el.dataset.cms] || '').trim(); if (v) el.textContent = v; });
+  const days = parseInt(c.trial_days, 10);
+  if (days > 0) {
+    document.querySelectorAll('.trial-days').forEach(el => el.textContent = bnDigits(days));
+    const tc = document.getElementById('trialCount'); if (tc) { tc.dataset.count = String(days); tc.textContent = bnDigits(days); }
+  }
+  if ((c.plan_price || '').trim()) document.getElementById('priceAmount').innerHTML = `৳${bnMoney(c.plan_price)} <small>/ মাস</small>`;
+  if ((c.plan_name || '').trim()) document.querySelectorAll('.plan h3').forEach(h => h.textContent = c.plan_name.trim() + ' প্ল্যান');
+  // contact details
+  let any = false;
+  document.querySelectorAll('#contactList [data-c]').forEach(li => {
+    const v = (c[li.dataset.c] || '').trim(); li.hidden = !v; if (!v) return; any = true;
+    const a = li.querySelector('a'), b = li.querySelector('b');
+    if (li.dataset.c === 'contact_phone') { a.textContent = bnDigits(v); a.href = 'tel:' + v.replace(/[^\d+]/g, ''); }
+    else if (li.dataset.c === 'contact_whatsapp') { const n = v.replace(/\D/g, ''); a.textContent = bnDigits(v); a.href = 'https://wa.me/' + (n.startsWith('0') ? '88' + n : n); }
+    else if (li.dataset.c === 'contact_email') { a.textContent = v; a.href = 'mailto:' + v; }
+    else b.textContent = v;
+  });
+  document.getElementById('contactSoon').hidden = any;
+  const wa = (c.contact_whatsapp || '').replace(/\D/g, '');
+  if (wa) { const f = document.getElementById('waFloat'); f.href = 'https://wa.me/' + (wa.startsWith('0') ? '88' + wa : wa); f.hidden = false; }
+  // social links
+  const socials = [['social_facebook','Facebook'],['social_youtube','YouTube'],['social_instagram','Instagram'],['social_tiktok','TikTok']]
+    .filter(([k]) => /^https?:\/\//i.test((c[k] || '').trim()));
+  const row = document.getElementById('socialRow');
+  if (socials.length) { row.innerHTML = socials.map(([k, n]) => `<a href="${esc(c[k].trim())}" target="_blank" rel="noopener">${n}</a>`).join(''); row.hidden = false; }
+  // demo store link
+  const demo = (c.demo_store_slug || '').trim().toLowerCase();
+  if (/^[a-z0-9-]{2,40}$/.test(demo)) document.querySelectorAll('[data-link="demo"]').forEach(a => a.href = '/?store=' + demo);
+  // FAQ
+  try {
+    const faq = JSON.parse(c.landing_faq || '[]');
+    if (Array.isArray(faq) && faq.length) document.getElementById('faqList').innerHTML = faq
+      .filter(f => f && f.q && f.a).map(f => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('');
+  } catch {}
+}
+fetch(`${SUPA.url}/rest/v1/platform_settings?select=key,value`, { headers: { apikey: SUPA.key } })
+  .then(r => r.ok ? r.json() : [])
+  .then(rows => applyCms(Object.fromEntries((rows || []).map(r => [r.key, r.value]))))
+  .catch(() => {});
+
 document.getElementById('year').textContent = bnDigits(new Date().getFullYear());
 
 /* Show numbers in Bangla digits at rest; count up when they come into view */

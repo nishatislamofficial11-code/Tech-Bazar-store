@@ -16,11 +16,7 @@ export default function MerchantLogin() {
   const routeToStore = async () => {
     const store = await getMyStore();
     if (store) {
-      if (store.status === 'pending') {
-        setInfo('আপনার দোকান অনুমোদনের অপেক্ষায় আছে। অনুমোদন হলে এখান থেকেই লগইন করতে পারবেন।');
-        await rawSupabase.auth.signOut();
-        return;
-      }
+      // A store awaiting approval still opens its admin; a banner there explains the wait
       if (store.status === 'rejected') {
         setError('আপনার আবেদন গ্রহণ করা হয়নি। বিস্তারিত জানতে আমাদের সাথে যোগাযোগ করুন।');
         await rawSupabase.auth.signOut();
@@ -36,11 +32,6 @@ export default function MerchantLogin() {
     const pending = user?.user_metadata?.pending_store as PendingStore | undefined;
     if (pending?.slug) {
       const created = await createMyStore({ ...pending, ownerName: user?.user_metadata?.full_name || '' });
-      if (created.status === 'pending') {
-        setInfo('আপনার দোকানের আবেদন জমা হয়েছে। অনুমোদন হলে ইমেইলে জানানো হবে, তারপর এখান থেকে লগইন করবেন।');
-        await rawSupabase.auth.signOut();
-        return;
-      }
       openStoreAdmin(created.slug);
       return;
     }

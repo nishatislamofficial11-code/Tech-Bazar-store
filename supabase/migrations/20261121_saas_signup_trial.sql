@@ -30,12 +30,13 @@ create table if not exists public.platform_settings (
 alter table public.platform_settings enable row level security;
 drop policy if exists platform_public_read on public.platform_settings;
 create policy platform_public_read on public.platform_settings for select to anon, authenticated
-  using (key in ('signup_mode','trial_days','plan_name','plan_price'));
+  using (key not like 'private\_%');
 drop policy if exists platform_super_write on public.platform_settings;
 create policy platform_super_write on public.platform_settings for all to authenticated
   using (public.is_super_admin()) with check (public.is_super_admin());
 insert into public.platform_settings(key, value) values
-  ('signup_mode','auto'), ('trial_days','30'), ('plan_name','Cloud Commerce'), ('plan_price','')
+  ('signup_mode','auto'), ('trial_days','30'), ('plan_name','Cloud Commerce'), ('plan_price',''),
+  ('phone_verification','on')
 on conflict (key) do nothing;
 
 -- 3. Is a store open to customers right now?
@@ -64,7 +65,25 @@ CREATE OR REPLACE FUNCTION public.create_checkout_order(order_data jsonb, items_
   RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
 AS $function$ DECLARE sid uuid:=public.current_store_id(); oid uuid:=gen_random_uuid(); p public.products; it jsonb; v jsonb; qty integer; unit numeric; subtotal numeric:=0; ship numeric; total numeric; advance numeric; method text:=coalesce(order_data->>'payment_method','cod'); methods jsonb; fixed numeric:=0; st jsonb; maxship numeric:=0; extra numeric:=0; regular boolean:=false; productship boolean:=false; freeall boolean:=true; result public.orders; BEGIN IF sid IS NULL OR NOT public.store_is_open(sid) THEN RAISE EXCEPTION 'Store unavailable'; END IF; SELECT coalesce(jsonb_object_agg(key,value),'{}') INTO st FROM public.settings WHERE store_id=sid; IF auth.uid() IS NULL AND coalesce(st->>'allow_guest_checkout','false')<>'true' THEN RAISE EXCEPTION 'Sign in required'; END IF; IF jsonb_typeof(items_data)<>'array' OR jsonb_array_length(items_data)=0 OR jsonb_array_length(items_data)>100 THEN RAISE EXCEPTION 'Invalid cart'; END IF; IF method NOT IN ('cod','delivery_advance','fixed_advance','full') THEN RAISE EXCEPTION 'Invalid payment method'; END IF; methods:=coalesce((st->>'payment_methods')::jsonb,'["cod"]'); IF NOT methods ? method THEN RAISE EXCEPTION 'Payment method unavailable'; END IF; FOR it IN SELECT value FROM jsonb_array_elements(items_data) LOOP SELECT * INTO p FROM public.products WHERE id=(it->>'product_id')::uuid AND store_id=sid; IF NOT FOUND THEN RAISE EXCEPTION 'Product belongs to another store'; END IF; qty:=(it->>'quantity')::integer; IF qty<1 OR qty>1000 OR coalesce(p.stock,100)<qty THEN RAISE EXCEPTION 'Product stock unavailable'; END IF; v:=NULL; IF nullif(it->>'variant_sku','') IS NOT NULL AND jsonb_array_length(coalesce(p.variants,'[]'))>0 THEN SELECT value INTO v FROM jsonb_array_elements(p.variants) WHERE value->>'sku'=it->>'variant_sku' LIMIT 1; IF v IS NULL THEN RAISE EXCEPTION 'Variant unavailable'; END IF; END IF; unit:=coalesce((v->>'price')::numeric,p.price); IF unit<0 OR round((it->>'price')::numeric,2)<>round(unit,2) THEN RAISE EXCEPTION 'Product price changed; refresh cart'; END IF; subtotal:=subtotal+unit*qty; extra:=extra+coalesce((v->>'delivery_charge')::numeric,0)*qty; freeall:=freeall AND coalesce(p.is_delivery_free,false); IF NOT coalesce(p.is_delivery_free,false) AND coalesce((v->>'delivery_charge')::numeric,0)=0 THEN regular:=true; IF coalesce(p.delivery_charge,0)>0 THEN productship:=true; maxship:=greatest(maxship,p.delivery_charge); END IF; END IF; END LOOP; ship:=0; IF NOT freeall THEN ship:=extra; IF regular THEN ship:=ship+CASE WHEN productship THEN maxship WHEN st->>'delivery_charge_type'='flat' THEN coalesce((st->>'flat_delivery_charge')::numeric,120) WHEN order_data->>'delivery_area'='inside_dhaka' THEN coalesce((st->>'delivery_charge_inside_dhaka')::numeric,0) ELSE coalesce((st->>'delivery_charge_outside_dhaka')::numeric,0) END; END IF; END IF; ship:=round(ship,2); total:=round(subtotal+ship,2); IF abs(total-(order_data->>'total_amount')::numeric)>0.01 OR abs(ship-(order_data->>'shipping_charge')::numeric)>0.01 THEN RAISE EXCEPTION 'Delivery or total changed; refresh checkout'; END IF; fixed:=coalesce((st->>'payment_fixed_advance')::numeric,0); advance:=CASE method WHEN 'cod' THEN 0 WHEN 'delivery_advance' THEN ship WHEN 'full' THEN total ELSE least(greatest(fixed,0),total) END; IF advance>0 AND NOT EXISTS(SELECT 1 FROM public.store_payment_gateways WHERE store_id=sid AND gateway=st->>'payment_gateway' AND is_active) THEN RAISE EXCEPTION 'Payment gateway not configured'; END IF; INSERT INTO public.orders(id,user_id,store_id,total_amount,shipping_charge,shipping_address,status,order_source,payment_method,advance_required,customer_name,customer_phone,customer_address,order_note) VALUES(oid,auth.uid(),sid,total,ship,order_data->'shipping_address','pending',order_data->>'order_source',method,advance,order_data->>'customer_name',order_data->>'customer_phone',order_data->>'customer_address',order_data->>'order_note') RETURNING * INTO result; FOR it IN SELECT value FROM jsonb_array_elements(items_data) LOOP INSERT INTO public.order_items(order_id,store_id,product_id,quantity,price,variant_sku,variant_options,variant_compare_price,variant_weight) VALUES(oid,sid,(it->>'product_id')::uuid,(it->>'quantity')::integer,(it->>'price')::numeric,it->>'variant_sku',it->'variant_options',nullif(it->>'variant_compare_price','')::numeric,nullif(it->>'variant_weight','')::numeric); END LOOP; IF advance=0 THEN PERFORM public.complete_order_inventory(oid); END IF; IF draft_id IS NOT NULL THEN DELETE FROM public.incomplete_orders WHERE id=draft_id AND store_id=sid; END IF; RETURN jsonb_build_object('id',oid,'checkout_token',result.checkout_token,'total_amount',total,'advance_required',advance,'shipping_charge',ship); END $function$;
 
--- 4. Self sign-up: a signed-in, email-verified user creates their own store
+-- 4a. Phone verification codes (written only by the server; nobody can read them from the browser)
+create table if not exists public.phone_otps (
+  id bigserial primary key,
+  phone text not null,
+  code_hash text not null,
+  expires_at timestamptz not null,
+  attempts int not null default 0,
+  verified_at timestamptz,
+  ip text,
+  created_at timestamptz not null default now()
+);
+create index if not exists phone_otps_phone_idx on public.phone_otps(phone, created_at desc);
+create index if not exists phone_otps_ip_idx on public.phone_otps(ip, created_at desc);
+alter table public.phone_otps enable row level security;
+drop policy if exists "deny all client access" on public.phone_otps;
+create policy "deny all client access" on public.phone_otps as permissive for all to anon, authenticated using (false) with check (false);
+revoke all on public.phone_otps from anon, authenticated;
+
+-- 4. Self sign-up: a signed-in user with a verified phone creates their own store
 create or replace function public.merchant_create_store(
   p_store_name text, p_slug text, p_owner_name text, p_phone text, p_business_type text default null)
 returns jsonb language plpgsql security definer set search_path = public, auth as $$
@@ -95,6 +114,9 @@ begin
   if v_phone !~ '^01[3-9][0-9]{8}$' then raise exception 'সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)'; end if;
   if exists (select 1 from public.stores where owner_phone = v_phone) then
     raise exception 'এই নম্বর দিয়ে আগেই একটা দোকান খোলা হয়েছে'; end if;
+  if coalesce((select value from public.platform_settings where key = 'phone_verification'), 'on') = 'on'
+     and not exists (select 1 from public.phone_otps where phone = v_phone and verified_at > now() - interval '2 hours') then
+    raise exception 'আগে মোবাইল নম্বর যাচাই করুন'; end if;
 
   v_mode := coalesce((select value from public.platform_settings where key = 'signup_mode'), 'auto');
   v_days := coalesce(nullif((select value from public.platform_settings where key = 'trial_days'), '')::int, 30);

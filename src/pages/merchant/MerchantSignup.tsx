@@ -22,7 +22,32 @@ export default function MerchantSignup() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState('');
+  const [step, setStep] = useState<'form' | 'otp'>('form');
+  const [otp, setOtp] = useState('');
+  const [resendIn, setResendIn] = useState(0);
+  const [phoneCheck, setPhoneCheck] = useState(true);
   const checkSeq = useRef(0);
+
+  // Is phone verification switched on in the super admin?
+  useEffect(() => {
+    rawSupabase.from('platform_settings').select('value').eq('key', 'phone_verification').maybeSingle()
+      .then(({ data }) => setPhoneCheck((data?.value ?? 'on') === 'on'));
+  }, []);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn((n) => n - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
+
+  const otpRequest = async (action: 'send' | 'verify') => {
+    const res = await fetch('/api/otp', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, phone: normalizePhone(phone), code: otp }),
+    });
+    const out = await res.json().catch(() => null);
+    if (!res.ok || !out?.ok) throw new Error(out?.error || 'সার্ভারে সমস্যা, আবার চেষ্টা করুন।');
+  };
 
   // Suggest a link from the store name until the owner edits it
   useEffect(() => { if (!slugTouched) setSlug(suggestSlug(storeName)); }, [storeName, slugTouched]);
@@ -54,8 +79,47 @@ export default function MerchantSignup() {
     if (slugState === 'taken') return setError('এই লিংক আগে থেকেই নেওয়া, অন্য একটা দিন।');
 
     setBusy(true);
-    const pending = { name: storeName.trim(), slug, phone: cleanPhone, business_type: businessType };
     try {
+      if (phoneCheck) {
+        await otpRequest('send');
+        setOtp(''); setStep('otp'); setResendIn(60);
+        return;
+      }
+      await finishSignup();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'আবার চেষ্টা করুন।');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resend = async () => {
+    setError(''); setBusy(true);
+    try { await otpRequest('send'); setResendIn(60); }
+    catch (err) { setError(err instanceof Error ? err.message : 'কোড পাঠানো যায়নি'); }
+    finally { setBusy(false); }
+  };
+
+  const verifyAndFinish = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!/^\d{6}$/.test(otp)) { setError('৬ সংখ্যার কোড দিন।'); return; }
+    setBusy(true);
+    try {
+      await otpRequest('verify');
+      await finishSignup();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'আবার চেষ্টা করুন।');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Create the login account, then the store (phone is already verified on the server)
+  const finishSignup = async () => {
+    const cleanPhone = normalizePhone(phone);
+    const pending = { name: storeName.trim(), slug, phone: cleanPhone, business_type: businessType };
+    {
       const { data, error: signErr } = await rawSupabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
@@ -67,7 +131,12 @@ export default function MerchantSignup() {
       if (signErr) throw signErr;
       // Supabase returns a user with no identities when the email is already registered
       if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-        throw new Error('এই ইমেইল দিয়ে আগেই একাউন্ট খোলা আছে। লগইন করুন।');
+        // Email already has an account (e.g. as a shopper): sign in with it and open the store on it
+        const { error: inErr } = await rawSupabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+        if (inErr) throw new Error('এই ইমেইল দিয়ে আগেই একাউন্ট খোলা আছে, কিন্তু পাসওয়ার্ড মেলেনি। লগইন পেজ থেকে চেষ্টা করুন।');
+        const created = await createMyStore({ ...pending, ownerName: ownerName.trim() });
+        openStoreAdmin(created.slug);
+        return;
       }
       if (data.session) {
         // Email confirmation is off: create the store right away
@@ -76,10 +145,6 @@ export default function MerchantSignup() {
         return;
       }
       setSentTo(email.trim().toLowerCase());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'একাউন্ট খোলা যায়নি, আবার চেষ্টা করুন।');
-    } finally {
-      setBusy(false);
     }
   };
 
@@ -91,6 +156,29 @@ export default function MerchantSignup() {
           <p className="text-[#59607a]">ইমেইল না পেলে Spam বা Promotions ফোল্ডার দেখুন।</p>
           <a href="/merchant/login" className={primaryBtn}>লগইন পেজে যান</a>
         </div>
+      </MerchantShell>
+    );
+  }
+
+  if (step === 'otp') {
+    return (
+      <MerchantShell title="মোবাইল নম্বর যাচাই" subtitle={`${normalizePhone(phone)} নম্বরে একটা ৬ সংখ্যার কোড পাঠানো হয়েছে।`}>
+        <form onSubmit={verifyAndFinish} className="space-y-4">
+          <div>
+            <label htmlFor="otp" className={labelCls}>যাচাই কোড</label>
+            <input id="otp" className={`${inputCls} text-center text-2xl tracking-[0.5em]`} value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              inputMode="numeric" autoComplete="one-time-code" placeholder="------" autoFocus />
+          </div>
+          {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
+          <button type="submit" disabled={busy} className={primaryBtn}>{busy ? 'যাচাই হচ্ছে…' : 'যাচাই করে দোকান খুলুন'}</button>
+          <div className="flex flex-wrap justify-between gap-2 text-sm">
+            <button type="button" className="font-semibold text-[#3a3fd4]" onClick={() => { setStep('form'); setError(''); }}>নম্বর বদলান</button>
+            <button type="button" disabled={busy || resendIn > 0} onClick={resend} className="font-semibold text-[#3a3fd4] disabled:text-[#59607a]">
+              {resendIn > 0 ? `আবার কোড পাঠান (${resendIn})` : 'আবার কোড পাঠান'}
+            </button>
+          </div>
+        </form>
       </MerchantShell>
     );
   }
@@ -145,7 +233,7 @@ export default function MerchantSignup() {
           </select>
         </div>
         {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
-        <button type="submit" disabled={busy} className={primaryBtn}>{busy ? 'একাউন্ট খোলা হচ্ছে…' : 'ফ্রি একাউন্ট খুলুন'}</button>
+        <button type="submit" disabled={busy} className={primaryBtn}>{busy ? 'অপেক্ষা করুন…' : phoneCheck ? 'মোবাইলে কোড পাঠান' : 'ফ্রি একাউন্ট খুলুন'}</button>
         <p className="text-center text-sm text-[#59607a]">আগেই একাউন্ট আছে? <a href="/merchant/login" className="font-semibold text-[#3a3fd4]">লগইন করুন</a></p>
       </form>
     </MerchantShell>
