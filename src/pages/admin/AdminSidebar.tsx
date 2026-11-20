@@ -7,7 +7,7 @@ import {
   Sliders, Paintbrush, SearchCheck, LogOut, 
   Search, X, PanelLeftClose, PanelLeft, 
   Globe, Receipt, Box, LifeBuoy, Settings, CreditCard,
-  ChevronDown, ChevronRight, Gem,
+  ChevronDown, ChevronRight, Gem, UserRound,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { buildCloudinaryUrl } from '../../lib/cloudinary';
@@ -52,6 +52,7 @@ export const NAV_ITEMS: NavItemDef[] = [
     ]
   },
   { name: 'Categories', path: '/admin/categories', icon: FolderTree },
+  { name: 'Customers', path: '/admin/customers', icon: UserRound, adminOnly: true },
   { name: 'Reviews', path: '/admin/reviews', icon: Star, badgeKey: 'pendingReviews' },
   { section: 'Shop & Growth', name: 'Banners', path: '/admin/banners', icon: ImageIcon, adminOnly: true },
   { section: 'Shop & Growth', name: 'Landing Pages', path: '/admin/landing-pages', icon: LayoutTemplate, adminOnly: true },
@@ -69,17 +70,7 @@ export const NAV_ITEMS: NavItemDef[] = [
       { name: 'Blacklist', path: '/admin/blacklist' }
     ]
   },
-  { 
-    section: 'Team',
-    name: 'Team', 
-    path: '/admin/users', 
-    icon: Users, 
-    adminOnly: true,
-    children: [
-      { name: 'Users', path: '/admin/users', adminOnly: true },
-      { name: 'Customers', path: '/admin/customers', adminOnly: true }
-    ]
-  },
+  { section: 'Team', name: 'Team', path: '/admin/users', icon: Users, adminOnly: true },
   { section: 'Shop & Growth', name: 'Appearance', path: '/admin/customize', icon: Paintbrush, adminOnly: true },
   { section: 'Shop & Growth', name: 'SEO', path: '/admin/seo', icon: SearchCheck, adminOnly: true },
 ];
