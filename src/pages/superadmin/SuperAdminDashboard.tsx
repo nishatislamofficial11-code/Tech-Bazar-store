@@ -4,8 +4,9 @@ import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { Store, Plus, Copy, LogOut, RefreshCw, CheckCircle2, XCircle, Settings2, Trash2, Search } from 'lucide-react';
 import { filterStores } from '../../lib/storeSearch';
+import { PlanBadge, PlanActions, PlatformSettingsCard, type PlanInfo } from '../../components/superadmin/PlatformControls';
 
-interface StoreRow {
+interface StoreRow extends PlanInfo {
   id: string;
   name: string;
   slug: string;
@@ -28,7 +29,7 @@ export default function SuperAdminDashboard() {
   const [stores, setStores] = useState<StoreRow[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
-  const filteredStores = filterStores(stores, search);
+  const filteredStores: StoreRow[] = filterStores<StoreRow>(stores, search);
 
   const [storeName, setStoreName] = useState('');
   const [slug, setSlug] = useState('');
@@ -112,10 +113,8 @@ export default function SuperAdminDashboard() {
   };
 
   const loadStores = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('stores')
-      .select('id, name, slug, is_active, admin_email, created_at')
-      .order('created_at', { ascending: false });
+    // Owner contact details are private, so the full list comes from a super-admin-only function
+    const { data, error } = await supabase.rpc('super_list_stores');
     if (error) {
       toast.error('স্টোর তালিকা আনা যায়নি: ' + error.message);
       return;
@@ -267,6 +266,7 @@ export default function SuperAdminDashboard() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        <PlatformSettingsCard />
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
           <h2 className="text-base font-bold flex items-center gap-2 mb-4">
             <Plus className="h-5 w-5 text-emerald-400" />
@@ -392,6 +392,7 @@ export default function SuperAdminDashboard() {
                     {store.admin_email && (
                       <p className="text-xs text-slate-500 truncate">{store.admin_email}</p>
                     )}
+                    <div className="mt-1"><PlanBadge s={store} /></div>
                     <p className="text-[11px] mt-1 flex items-center gap-1">
                       {store.is_active ? (
                         <span className="text-emerald-400 flex items-center gap-1">
@@ -440,6 +441,7 @@ export default function SuperAdminDashboard() {
                             : 'লুকানো (নিরাপত্তার জন্য দেখা যায় না — নিচে নতুন পাসওয়ার্ড দিন)'}
                         </p>
                       </div>
+                      <PlanActions storeId={store.id} s={store} onDone={loadStores} />
                       <button
                         onClick={() => copyText(storeInfoText(store, store.admin_email || '', lastSaved?.id === store.id ? lastSaved.password : undefined))}
                         className="flex items-center gap-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-2"
