@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase';
 interface ShopLite { id: string; name: string; slug: string }
 interface ShopPlan { active: boolean; monthly_limit: number }
 
-type Provider = 'anthropic' | 'openai' | 'google';
+type Provider = 'anthropic' | 'openai' | 'google' | 'groq' | 'openrouter';
 const PROVIDERS: { id: Provider; label: string; keyName: string; keyHint: string; site: string; models: string[] }[] = [
   {
     id: 'anthropic', label: 'Claude (Anthropic)', keyName: 'private_anthropic_api_key', keyHint: 'sk-ant-...', site: 'console.anthropic.com',
@@ -18,7 +18,15 @@ const PROVIDERS: { id: Provider; label: string; keyName: string; keyHint: string
   },
   {
     id: 'google', label: 'Gemini (Google)', keyName: 'private_google_api_key', keyHint: 'AIza...', site: 'aistudio.google.com',
-    models: ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'],
+    models: ['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-pro-latest'],
+  },
+  {
+    id: 'groq', label: 'Groq (ফ্রি টেস্ট)', keyName: 'private_groq_api_key', keyHint: 'gsk_...', site: 'console.groq.com',
+    models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+  },
+  {
+    id: 'openrouter', label: 'OpenRouter (ফ্রি টেস্ট)', keyName: 'private_openrouter_api_key', keyHint: 'sk-or-...', site: 'openrouter.ai',
+    models: ['meta-llama/llama-3.3-70b-instruct:free'],
   },
 ];
 const input = 'w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500';
@@ -111,7 +119,7 @@ export function AiSuperCard({ stores }: { stores: ShopLite[] }) {
           <h2 className="text-base font-bold flex items-center gap-2"><Bot className="h-5 w-5 text-emerald-400" />AI সেটিংস</h2>
           <p className="mt-1 text-xs text-slate-400">যে AI বেছে নেবেন, সব দোকানের চ্যাট সেটা দিয়েই চলবে। যখন খুশি বদলাতে পারবেন। API Key শুধু আপনি আর সার্ভার দেখতে পারে।</p>
         </div>
-        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="AI কোম্পানি">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2" role="radiogroup" aria-label="AI কোম্পানি">
           {PROVIDERS.map((p) => (
             <button key={p.id} type="button" role="radio" aria-checked={provider === p.id} onClick={() => pickProvider(p.id)}
               className={`rounded-xl border px-2 py-3 text-xs font-bold transition ${provider === p.id ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'}`}>

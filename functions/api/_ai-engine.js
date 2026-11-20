@@ -8,7 +8,16 @@ import { rest, notifyStoreTelegram, escapeHtml } from './_store-lib.js';
 const PROVIDERS = {
   anthropic: { keyName: 'private_anthropic_api_key', defaultModel: 'claude-haiku-5-5' },
   openai: { keyName: 'private_openai_api_key', defaultModel: 'gpt-4o-mini' },
-  google: { keyName: 'private_google_api_key', defaultModel: 'gemini-2.5-flash' },
+  google: { keyName: 'private_google_api_key', defaultModel: 'gemini-flash-latest' },
+  groq: { keyName: 'private_groq_api_key', defaultModel: 'llama-3.3-70b-versatile' },
+  openrouter: { keyName: 'private_openrouter_api_key', defaultModel: 'meta-llama/llama-3.3-70b-instruct:free' },
+};
+// OpenAI-style chat APIs (same request shape, different address)
+const OPENAI_STYLE = {
+  openai: { url: 'https://api.openai.com/v1/chat/completions', label: 'ChatGPT', format: 'schema' },
+  groq: { url: 'https://api.groq.com/openai/v1/chat/completions', label: 'Groq', format: 'json' },
+  // Free OpenRouter models differ in what they support, so rely on the prompt for the JSON shape
+  openrouter: { url: 'https://openrouter.ai/api/v1/chat/completions', label: 'OpenRouter', format: null },
 };
 const HISTORY_LIMIT = 20;
 // Hand-offs caused by a technical problem (key, model, limit) start with this mark; the next
@@ -33,7 +42,7 @@ const REPLY_SCHEMA = {
 const taka = (n) => `৳${Number(n || 0).toLocaleString('en-US')}`;
 
 async function platformAi(cfg) {
-  const rows = await rest(cfg, 'platform_settings?key=in.(ai_provider,ai_model,private_anthropic_api_key,private_openai_api_key,private_google_api_key)&select=key,value');
+  const rows = await rest(cfg, 'platform_settings?key=in.(ai_provider,ai_model,private_anthropic_api_key,private_openai_api_key,private_google_api_key,private_groq_api_key,private_openrouter_api_key)&select=key,value');
   const map = Object.fromEntries((rows || []).map((r) => [r.key, r.value]));
   const provider = PROVIDERS[map.ai_provider] ? map.ai_provider : 'anthropic';
   return {
@@ -182,13 +191,16 @@ async function askAnthropic(platform, system, context, messages) {
 }
 
 async function askOpenAI(platform, system, context, messages) {
-  const data = await callApi('https://api.openai.com/v1/chat/completions',
+  const api = OPENAI_STYLE[platform.provider] || OPENAI_STYLE.openai;
+  const data = await callApi(api.url,
     { Authorization: `Bearer ${platform.apiKey}` },
     {
       model: platform.model,
       messages: [{ role: 'system', content: `${system}\n\n${context}` }, ...messages],
-      response_format: { type: 'json_schema', json_schema: { name: 'shop_reply', strict: true, schema: REPLY_SCHEMA } },
-    }, 'ChatGPT');
+      // ChatGPT enforces the exact shape; the free services only promise valid JSON (the prompt describes the shape)
+      ...(api.format === 'schema' ? { response_format: { type: 'json_schema', json_schema: { name: 'shop_reply', strict: true, schema: REPLY_SCHEMA } } } : {}),
+      ...(api.format === 'json' ? { response_format: { type: 'json_object' } } : {}),
+    }, api.label);
   return parseJson(data?.choices?.[0]?.message?.content);
 }
 
@@ -207,7 +219,7 @@ async function askAi(platform, ai, context, history) {
   const system = systemPrompt(ai);
   const ctx = `# দোকানের তথ্য\n${context}`;
   const messages = toApiMessages(history);
-  if (platform.provider === 'openai') return askOpenAI(platform, system, ctx, messages);
+  if (OPENAI_STYLE[platform.provider]) return askOpenAI(platform, system, ctx, messages);
   if (platform.provider === 'google') return askGemini(platform, system, ctx, messages);
   return askAnthropic(platform, system, ctx, messages);
 }
