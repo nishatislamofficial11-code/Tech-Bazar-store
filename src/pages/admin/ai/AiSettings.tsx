@@ -3,6 +3,41 @@ import toast from 'react-hot-toast';
 import { Bot, Plus, RotateCcw, Send, Trash2, Sparkles } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { aiChatApi } from '../../../lib/aiApi';
+import { useSettings } from '../../../contexts/SettingsContext';
+
+function WebsiteChatCard() {
+  const { settings, refreshSettings } = useSettings();
+  const [busy, setBusy] = useState('');
+  const hasNumber = Boolean(settings.whatsapp_number?.trim());
+  const toggle = async (key: 'ai_web_chat_enabled' | 'floating_whatsapp_enabled', on: boolean) => {
+    setBusy(key);
+    const { error } = await supabase.from('settings').upsert({ key, value: on ? 'true' : 'false' }, { onConflict: 'key' });
+    setBusy('');
+    if (error) return toast.error(error.message);
+    await refreshSettings();
+    toast.success(on ? 'চালু হয়েছে' : 'বন্ধ হয়েছে');
+  };
+  const row = (key: 'ai_web_chat_enabled' | 'floating_whatsapp_enabled', title: string, desc: string, disabled = false) => (
+    <label className={`flex items-center justify-between gap-4 ${disabled ? 'opacity-50' : 'cursor-pointer'}`}>
+      <span>
+        <span className="block text-sm font-bold text-gray-900">{title}</span>
+        <span className="block text-xs text-gray-500">{desc}</span>
+      </span>
+      <input type="checkbox" className="h-5 w-5 shrink-0" disabled={disabled || busy === key}
+        checked={settings[key] === 'true'} onChange={(e) => toggle(key, e.target.checked)} />
+    </label>
+  );
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+      <div>
+        <h2 className="font-bold text-gray-900">ওয়েবসাইটের চ্যাট বাটন</h2>
+        <p className="text-xs text-gray-500">দুটোই চালু থাকলে বাটনে চাপ দিলে WhatsApp আর AI চ্যাট দুটো অপশন আসবে। একটা চালু থাকলে সরাসরি সেটাই খুলবে।</p>
+      </div>
+      {row('ai_web_chat_enabled', 'AI চ্যাট', 'ভিজিটর ওয়েবসাইটেই AI-এর সাথে কথা বলতে পারবে। চ্যাটগুলো AI Inbox-এ আসবে।')}
+      {row('floating_whatsapp_enabled', 'WhatsApp', hasNumber ? `নম্বর: ${settings.whatsapp_number}` : 'আগে Settings-এ WhatsApp নম্বর দিন', !hasNumber && settings.floating_whatsapp_enabled !== 'true')}
+    </div>
+  );
+}
 
 interface AiSettingsRow {
   enabled: boolean;
@@ -189,6 +224,8 @@ export default function AiSettings() {
 
         <button onClick={save} disabled={saving} className="w-full bg-primary text-white font-bold py-2.5 rounded-xl disabled:opacity-50">{saving ? 'সেভ হচ্ছে…' : 'সেভ করুন'}</button>
       </div>
+
+      <WebsiteChatCard />
 
       <TestChat ready={saved.enabled && exists} />
     </div>

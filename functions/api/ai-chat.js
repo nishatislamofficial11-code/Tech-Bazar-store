@@ -69,7 +69,7 @@ export async function onRequest(context) {
       if (!conv) return json({ ok: false, error: 'চ্যাট পাওয়া যায়নি' }, 404);
       const message = String(body.message || '').trim();
       if (!message) return json({ ok: false, error: 'মেসেজ লিখুন' }, 400);
-      if (conv.channel !== 'test') {
+      if (conv.channel !== 'test' && conv.channel !== 'website') {
         return json({ ok: false, error: 'Facebook/Instagram/WhatsApp সংযোগ এখনো চালু হয়নি, তাই এই চ্যাটে মেসেজ পাঠানো যাচ্ছে না' }, 400);
       }
       await addAgentMessage(cfg, conv, agent, message);
