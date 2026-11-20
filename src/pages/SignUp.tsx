@@ -35,6 +35,34 @@ export default function SignUp() {
       return;
     }
 
+    const slug = new URLSearchParams(window.location.search).get('store') || localStorage.getItem('current_store_slug') || '';
+
+    // Email already registered (e.g. on another shop): the same email + password signs in here
+    if (authData?.user && Array.isArray(authData.user.identities) && authData.user.identities.length === 0) {
+      const { error: inErr } = await supabase.auth.signInWithPassword({ email, password });
+      if (inErr) {
+        toast.error('এই ইমেইল দিয়ে আগেই একাউন্ট আছে। সঠিক পাসওয়ার্ড দিয়ে লগইন করুন।');
+        setLoading(false);
+        return;
+      }
+      const { data: joined } = await supabase.rpc('join_store_as_customer', { p_slug: slug });
+      if (joined !== true) {
+        await supabase.auth.signOut();
+        toast.error('এই ইমেইল দিয়ে একাউন্ট খোলা যাবে না। অন্য ইমেইল ব্যবহার করুন।');
+        setLoading(false);
+        return;
+      }
+      toast.success('লগইন হয়েছে!');
+      navigate('/');
+      setLoading(false);
+      return;
+    }
+
+    // New account: record the customer on this shop when Supabase signed them in right away
+    if (authData?.session) {
+      await supabase.rpc('join_store_as_customer', { p_slug: slug });
+    }
+
     if (authData?.user) {
       const { error: profileError } = await supabase
         .from('profiles')
