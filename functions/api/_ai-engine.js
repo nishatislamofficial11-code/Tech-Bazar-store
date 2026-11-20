@@ -1,10 +1,15 @@
 // AI Automation reply engine (underscore prefix = not a route).
 // Used by the admin test chat now, and by the Messenger / Instagram / WhatsApp webhooks later.
-// Calls the Claude Messages API over plain HTTPS: the official SDK pulls in Node-only modules
+// Works with Claude (Anthropic), ChatGPT (OpenAI) and Gemini (Google); the super admin picks one.
+// Each API is called over plain HTTPS: the official SDKs pull in Node-only modules
 // that the Cloudflare Worker bundle cannot include.
 import { rest, notifyStoreTelegram, escapeHtml } from './_store-lib.js';
 
-const DEFAULT_MODEL = 'claude-haiku-5-5';
+const PROVIDERS = {
+  anthropic: { keyName: 'private_anthropic_api_key', defaultModel: 'claude-haiku-5-5' },
+  openai: { keyName: 'private_openai_api_key', defaultModel: 'gpt-4o-mini' },
+  google: { keyName: 'private_google_api_key', defaultModel: 'gemini-2.5-flash' },
+};
 const HISTORY_LIMIT = 20;
 const DEFAULT_HANDOFF = 'আপনার বিষয়টি আমাদের একজন এজেন্টকে জানানো হয়েছে। কিছুক্ষণের মধ্যেই তিনি আপনাকে উত্তর দেবেন।';
 
@@ -24,9 +29,14 @@ const REPLY_SCHEMA = {
 const taka = (n) => `৳${Number(n || 0).toLocaleString('en-US')}`;
 
 async function platformAi(cfg) {
-  const rows = await rest(cfg, 'platform_settings?key=in.(private_anthropic_api_key,ai_model)&select=key,value');
+  const rows = await rest(cfg, 'platform_settings?key=in.(ai_provider,ai_model,private_anthropic_api_key,private_openai_api_key,private_google_api_key)&select=key,value');
   const map = Object.fromEntries((rows || []).map((r) => [r.key, r.value]));
-  return { apiKey: String(map.private_anthropic_api_key || '').trim(), model: String(map.ai_model || '').trim() || DEFAULT_MODEL };
+  const provider = PROVIDERS[map.ai_provider] ? map.ai_provider : 'anthropic';
+  return {
+    provider,
+    apiKey: String(map[PROVIDERS[provider].keyName] || '').trim(),
+    model: String(map.ai_model || '').trim() || PROVIDERS[provider].defaultModel,
+  };
 }
 
 function variantText(variants) {
@@ -102,7 +112,10 @@ needs_human=true করবে যখন:
 - অভিযোগ, ভাঙা/ভুল প্রোডাক্ট, রিফান্ড, টাকা কাটা, ডেলিভারি সমস্যা
 - কাস্টমার রেগে আছে, বা একই বিষয় বারবার বোঝানো যাচ্ছে না
 - কাস্টমার অর্ডারের সব তথ্য দিয়ে দিয়েছে (এজেন্ট অর্ডার কনফার্ম করবে)
-needs_human=true হলে reply-তে কাস্টমারকে ভদ্রভাবে জানাও যে এজেন্ট শীঘ্রই উত্তর দেবেন।`;
+needs_human=true হলে reply-তে কাস্টমারকে ভদ্রভাবে জানাও যে এজেন্ট শীঘ্রই উত্তর দেবেন।
+
+উত্তর শুধু একটা JSON অবজেক্ট হবে, এই ঘরগুলো সহ:
+{"reply": "কাস্টমারকে পাঠানোর মেসেজ", "needs_human": true/false, "handoff_reason": "এজেন্টের জন্য ছোট কারণ (না লাগলে খালি)", "sentiment": "positive" | "neutral" | "negative", "summary": "পুরো কথোপকথনের এক লাইনের সারাংশ"}`;
 }
 
 function toApiMessages(history) {
@@ -116,30 +129,73 @@ function toApiMessages(history) {
   return out;
 }
 
-async function askClaude(platform, ai, context, history) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'x-api-key': platform.apiKey, 'anthropic-version': '2026-10-21', 'content-type': 'application/json' },
-    body: JSON.stringify({
-      model: platform.model,
-      max_tokens: 2000,
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: REPLY_SCHEMA } },
-      system: [
-        { type: 'text', text: systemPrompt(ai) },
-        { type: 'text', text: `# দোকানের তথ্য\n${context}`, cache_control: { type: 'ephemeral' } },
-      ],
-      messages: toApiMessages(history),
-    }),
-  });
+function parseJson(text) {
+  if (!text) return null;
+  const clean = String(text).trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/, '').trim();
+  try { return JSON.parse(clean); } catch { return null; }
+}
+
+async function callApi(url, headers, body, label) {
+  const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    const msg = data?.error?.message || `HTTP ${res.status}`;
-    throw new Error(res.status === 401 ? 'AI API Key ভুল' : res.status === 429 ? 'AI ব্যস্ত, একটু পরে চেষ্টা করুন' : msg);
+    if (res.status === 401 || res.status === 403) throw new Error(`${label} API Key ভুল বা অনুমতি নেই`);
+    if (res.status === 429) throw new Error(`${label} ব্যস্ত বা ব্যালান্স শেষ, একটু পরে চেষ্টা করুন`);
+    if (res.status === 404) throw new Error(`${label}-এ এই মডেল পাওয়া যায়নি, সুপার এডমিনে মডেলের নাম ঠিক করুন`);
+    throw new Error(`${label}: ${data?.error?.message || `HTTP ${res.status}`}`);
   }
-  if (!data || data.stop_reason === 'refusal') return null;
-  const text = (data.content || []).find((b) => b.type === 'text')?.text;
-  if (!text) return null;
-  try { return JSON.parse(text); } catch { return null; }
+  return data;
+}
+
+// Claude 5.x models take the effort setting; older ones (e.g. Haiku 4.5) reject it
+const supportsEffort = (model) => /^claude-(opus|sonnet|haiku|fable|mythos)-5/.test(model);
+
+async function askAnthropic(platform, system, context, messages) {
+  const data = await callApi('https://api.anthropic.com/v1/messages',
+    { 'x-api-key': platform.apiKey, 'anthropic-version': '2026-10-21' },
+    {
+      model: platform.model,
+      max_tokens: 2000,
+      output_config: { ...(supportsEffort(platform.model) ? { effort: 'low' } : {}), format: { type: 'json_schema', schema: REPLY_SCHEMA } },
+      system: [
+        { type: 'text', text: system },
+        { type: 'text', text: context, cache_control: { type: 'ephemeral' } },
+      ],
+      messages,
+    }, 'Claude');
+  if (data?.stop_reason === 'refusal') return null;
+  return parseJson((data?.content || []).find((b) => b.type === 'text')?.text);
+}
+
+async function askOpenAI(platform, system, context, messages) {
+  const data = await callApi('https://api.openai.com/v1/chat/completions',
+    { Authorization: `Bearer ${platform.apiKey}` },
+    {
+      model: platform.model,
+      messages: [{ role: 'system', content: `${system}\n\n${context}` }, ...messages],
+      response_format: { type: 'json_schema', json_schema: { name: 'shop_reply', strict: true, schema: REPLY_SCHEMA } },
+    }, 'ChatGPT');
+  return parseJson(data?.choices?.[0]?.message?.content);
+}
+
+async function askGemini(platform, system, context, messages) {
+  const data = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(platform.model)}:generateContent`,
+    { 'x-goog-api-key': platform.apiKey },
+    {
+      systemInstruction: { parts: [{ text: `${system}\n\n${context}` }] },
+      contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+      generationConfig: { responseMimeType: 'application/json' },
+    }, 'Gemini');
+  return parseJson(data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join(''));
+}
+
+async function askAi(platform, ai, context, history) {
+  const system = systemPrompt(ai);
+  const ctx = `# দোকানের তথ্য\n${context}`;
+  const messages = toApiMessages(history);
+  if (platform.provider === 'openai') return askOpenAI(platform, system, ctx, messages);
+  if (platform.provider === 'google') return askGemini(platform, system, ctx, messages);
+  return askAnthropic(platform, system, ctx, messages);
 }
 
 async function addMessage(cfg, conv, role, content, extra = {}) {
@@ -196,14 +252,14 @@ export async function handleCustomerMessage(cfg, store, conv, text) {
   };
 
   const platform = await platformAi(cfg);
-  if (!platform.apiKey) return handOff('AI চালু নেই (সুপার এডমিনে AI API Key দেওয়া হয়নি)', null);
+  if (!platform.apiKey) return handOff('AI চালু নেই (সুপার এডমিনে বেছে নেওয়া AI-এর API Key দেওয়া হয়নি)', null);
   const allowed = await rest(cfg, 'rpc/ai_use_reply', { method: 'POST', body: JSON.stringify({ p_store: store.id }) });
   if (allowed !== true) return handOff('এই মাসের AI রিপ্লাই লিমিট শেষ বা AI প্যাক চালু নেই', null);
 
   const history = await rest(cfg, `ai_messages?conversation_id=eq.${conv.id}&select=role,content&order=created_at.desc&limit=${HISTORY_LIMIT}`);
   let out;
   try {
-    out = await askClaude(platform, ai, await shopContext(cfg, store, ai), (history || []).reverse());
+    out = await askAi(platform, ai, await shopContext(cfg, store, ai), (history || []).reverse());
   } catch (err) {
     return handOff(`AI উত্তর দিতে পারেনি (${String(err?.message || err).slice(0, 120)})`, null);
   }

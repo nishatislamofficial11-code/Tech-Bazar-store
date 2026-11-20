@@ -6,28 +6,43 @@ import { supabase } from '../../lib/supabase';
 interface ShopLite { id: string; name: string; slug: string }
 interface ShopPlan { active: boolean; monthly_limit: number }
 
-const MODELS = [
-  { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5 (সস্তা, দ্রুত — প্রস্তাবিত)' },
-  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5 (বেশি দামি, বেশি দক্ষ)' },
+type Provider = 'anthropic' | 'openai' | 'google';
+const PROVIDERS: { id: Provider; label: string; keyName: string; keyHint: string; site: string; models: string[] }[] = [
+  {
+    id: 'anthropic', label: 'Claude (Anthropic)', keyName: 'private_anthropic_api_key', keyHint: 'sk-ant-...', site: 'console.anthropic.com',
+    models: ['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-2', 'claude-haiku-4-5', 'claude-sonnet-4-6'],
+  },
+  {
+    id: 'openai', label: 'ChatGPT (OpenAI)', keyName: 'private_openai_api_key', keyHint: 'sk-...', site: 'platform.openai.com',
+    models: ['gpt-4o-mini', 'gpt-4.1-mini', 'gpt-4o', 'gpt-4.1'],
+  },
+  {
+    id: 'google', label: 'Gemini (Google)', keyName: 'private_google_api_key', keyHint: 'AIza...', site: 'aistudio.google.com',
+    models: ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'],
+  },
 ];
 const input = 'w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500';
 
 /** Super admin: Claude API key, model, and the AI add-on (on/off + monthly reply limit) for each shop. */
 export function AiSuperCard({ stores }: { stores: ShopLite[] }) {
-  const [apiKey, setApiKey] = useState('');
-  const [hasKey, setHasKey] = useState(false);
-  const [model, setModel] = useState(MODELS[0].id);
+  const [provider, setProvider] = useState<Provider>('anthropic');
+  const [model, setModel] = useState('');
+  const [keys, setKeys] = useState<Record<string, string>>({});
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [plans, setPlans] = useState<Record<string, ShopPlan>>({});
   const [usage, setUsage] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState('');
+  const current = PROVIDERS.find((p) => p.id === provider) || PROVIDERS[0];
 
   useEffect(() => {
     const month = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' }).slice(0, 7);
-    supabase.from('platform_settings').select('key, value').in('key', ['private_anthropic_api_key', 'ai_model']).then(({ data }) => {
-      const map = Object.fromEntries((data || []).map((r: { key: string; value: string }) => [r.key, r.value]));
-      setHasKey(Boolean(map.private_anthropic_api_key));
-      if (map.ai_model) setModel(map.ai_model);
-    });
+    supabase.from('platform_settings').select('key, value')
+      .in('key', ['ai_provider', 'ai_model', ...PROVIDERS.map((p) => p.keyName)]).then(({ data }) => {
+        const map = Object.fromEntries((data || []).map((r: { key: string; value: string }) => [r.key, r.value]));
+        if (PROVIDERS.some((p) => p.id === map.ai_provider)) setProvider(map.ai_provider as Provider);
+        setModel(map.ai_model || '');
+        setSaved(Object.fromEntries(PROVIDERS.map((p) => [p.keyName, Boolean(map[p.keyName])])));
+      });
     supabase.from('ai_store_plans').select('store_id, active, monthly_limit').then(({ data }) => {
       setPlans(Object.fromEntries((data || []).map((r: { store_id: string } & ShopPlan) => [r.store_id, { active: r.active, monthly_limit: r.monthly_limit }])));
     });
@@ -36,17 +51,28 @@ export function AiSuperCard({ stores }: { stores: ShopLite[] }) {
     });
   }, []);
 
+  const pickProvider = (id: Provider) => {
+    setProvider(id);
+    setModel(PROVIDERS.find((p) => p.id === id)?.models[0] || '');
+  };
+
   const saveKey = async () => {
+    const chosenModel = model.trim() || current.models[0];
+    if (!saved[current.keyName] && !keys[current.keyName]?.trim()) { toast.error(`${current.label}-এর API Key দিন`); return; }
     setBusy('key');
     const now = new Date().toISOString();
-    const rows = [{ key: 'ai_model', value: model, updated_at: now }];
-    if (apiKey.trim()) rows.push({ key: 'private_anthropic_api_key', value: apiKey.trim(), updated_at: now });
+    const rows = [{ key: 'ai_provider', value: provider, updated_at: now }, { key: 'ai_model', value: chosenModel, updated_at: now }];
+    for (const p of PROVIDERS) {
+      const v = keys[p.keyName]?.trim();
+      if (v) rows.push({ key: p.keyName, value: v, updated_at: now });
+    }
     const { error } = await supabase.from('platform_settings').upsert(rows, { onConflict: 'key' });
     setBusy('');
     if (error) return toast.error(error.message);
-    if (apiKey.trim()) setHasKey(true);
-    setApiKey('');
-    toast.success('AI সেটিংস সেভ হয়েছে');
+    setSaved((sv) => ({ ...sv, ...Object.fromEntries(PROVIDERS.filter((p) => keys[p.keyName]?.trim()).map((p) => [p.keyName, true])) }));
+    setKeys({});
+    setModel(chosenModel);
+    toast.success(`এখন সব দোকানে ${current.label} (${chosenModel}) চলবে`);
   };
 
   const savePlan = async (storeId: string, plan: ShopPlan) => {
@@ -62,19 +88,29 @@ export function AiSuperCard({ stores }: { stores: ShopLite[] }) {
     <div className="space-y-5">
       <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
         <div>
-          <h2 className="text-base font-bold flex items-center gap-2"><Bot className="h-5 w-5 text-emerald-400" />AI (Claude) সেটিংস</h2>
-          <p className="mt-1 text-xs text-slate-400">সব দোকানের AI এই একটা Claude API Key দিয়ে চলবে। Key শুধু আপনি আর সার্ভার দেখতে পারে। console.anthropic.com থেকে Key নিন।</p>
+          <h2 className="text-base font-bold flex items-center gap-2"><Bot className="h-5 w-5 text-emerald-400" />AI সেটিংস</h2>
+          <p className="mt-1 text-xs text-slate-400">যে AI বেছে নেবেন, সব দোকানের চ্যাট সেটা দিয়েই চলবে। যখন খুশি বদলাতে পারবেন। API Key শুধু আপনি আর সার্ভার দেখতে পারে।</p>
+        </div>
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="AI কোম্পানি">
+          {PROVIDERS.map((p) => (
+            <button key={p.id} type="button" role="radio" aria-checked={provider === p.id} onClick={() => pickProvider(p.id)}
+              className={`rounded-xl border px-2 py-3 text-xs font-bold transition ${provider === p.id ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'}`}>
+              {p.label}
+              <span className={`block mt-1 text-[10px] font-normal ${saved[p.keyName] ? 'text-emerald-400' : 'text-slate-500'}`}>{saved[p.keyName] ? 'Key আছে' : 'Key নেই'}</span>
+            </button>
+          ))}
         </div>
         <div>
-          <label htmlFor="ai-key" className="block text-xs text-slate-300 mb-1">Claude API Key</label>
-          <input id="ai-key" type="password" autoComplete="off" className={input} value={apiKey} onChange={(e) => setApiKey(e.target.value)}
-            placeholder={hasKey ? 'সেভ করা আছে — বদলাতে নতুনটা দিন' : 'sk-ant-...'} />
+          <label htmlFor="ai-key" className="block text-xs text-slate-300 mb-1">{current.label} API Key <span className="text-slate-500">({current.site} থেকে নিন)</span></label>
+          <input id="ai-key" type="password" autoComplete="off" className={input} value={keys[current.keyName] || ''}
+            onChange={(e) => setKeys((k) => ({ ...k, [current.keyName]: e.target.value }))}
+            placeholder={saved[current.keyName] ? 'সেভ করা আছে — বদলাতে নতুনটা দিন' : current.keyHint} />
         </div>
         <div>
-          <label htmlFor="ai-model" className="block text-xs text-slate-300 mb-1">মডেল</label>
-          <select id="ai-model" className={input} value={model} onChange={(e) => setModel(e.target.value)}>
-            {MODELS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-          </select>
+          <label htmlFor="ai-model" className="block text-xs text-slate-300 mb-1">মডেল <span className="text-slate-500">(তালিকা থেকে বাছুন বা নতুন মডেলের নাম লিখুন)</span></label>
+          <input id="ai-model" list="ai-model-list" className={input} value={model} onChange={(e) => setModel(e.target.value)} placeholder={current.models[0]} />
+          <datalist id="ai-model-list">{current.models.map((m) => <option key={m} value={m} />)}</datalist>
+          <p className="mt-1 text-[11px] text-slate-500">প্রথমটা সবচেয়ে সস্তা আর দ্রুত, চ্যাটের জন্য যথেষ্ট। বড় মডেল বেশি দামি।</p>
         </div>
         <button onClick={saveKey} disabled={!!busy} className="w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold py-2.5 text-sm">{busy === 'key' ? 'সেভ হচ্ছে…' : 'সেভ করুন'}</button>
       </section>
