@@ -20,8 +20,11 @@ export interface AiConversation {
   last_message_at: string;
 }
 
+export interface ProductCard { type: 'product'; title: string; price: number; image: string | null; path: string }
+
 export interface AiMessage {
   id: string;
+  attachments?: ProductCard[] | null;
   role: 'customer' | 'ai' | 'agent' | 'system';
   content: string;
   agent_name: string | null;
