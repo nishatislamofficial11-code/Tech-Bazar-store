@@ -1,3 +1,5 @@
+import { resolveStore } from './_store-lib.js';
+
 /**
  * Cloudflare Pages Functions - /api/track
  * Advanced Server-Side Conversions API Engine for Meta CAPI and TikTok Events API
@@ -135,9 +137,10 @@ export async function onRequest(context) {
     const resolvedCustomerId = customerId || cookies['_bd_cid'] || undefined;
 
     const SUPABASE_URL = context.env.VITE_SUPABASE_URL || context.env.SUPABASE_URL;
-    const SUPABASE_SERVICE_KEY = context.env.SUPABASE_SERVICE_ROLE_KEY || context.env.SUPABASE_SERVICE_KEY || context.env.VITE_SUPABASE_ANON_KEY || context.env.SUPABASE_ANON_KEY;
+    const SUPABASE_SERVICE_KEY = context.env.SUPABASE_SERVICE_ROLE_KEY;
+    const SUPABASE_ANON_KEY = context.env.VITE_SUPABASE_ANON_KEY || context.env.SUPABASE_ANON_KEY;
 
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SUPABASE_ANON_KEY) {
       console.warn('Track API: missing Supabase credentials in environment.');
       return new Response(JSON.stringify({ success: false, message: 'Tracking disabled: missing environment credentials' }), {
         status: 200,
@@ -146,7 +149,15 @@ export async function onRequest(context) {
     }
 
     // Fetch tracking settings from Supabase
-    const settingsResponse = await fetch(`${SUPABASE_URL}/rest/v1/settings?select=key,value`, {
+    // Each store has its own pixel: read only the settings of the store this visitor is on
+    const store = await resolveStore({ url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY, serviceKey: SUPABASE_SERVICE_KEY }, body.store, '');
+    if (!store) {
+      return new Response(JSON.stringify({ success: false, message: 'Store not found' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+    const settingsResponse = await fetch(`${SUPABASE_URL}/rest/v1/settings?select=key,value&store_id=eq.${store.id}`, {
       headers: {
         'apikey': SUPABASE_SERVICE_KEY,
         'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`

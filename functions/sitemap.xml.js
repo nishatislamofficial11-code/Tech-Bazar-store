@@ -1,3 +1,4 @@
+import { storeHeaders, storeSlugFromUrl } from './api/_store-lib.js';
 export async function onRequest(context) {
   // Access environment variables from Cloudflare context
   const SUPABASE_URL = context.env.VITE_SUPABASE_URL || context.env.SUPABASE_URL;
@@ -5,11 +6,14 @@ export async function onRequest(context) {
 
   const url = new URL(context.request.url);
   const baseUrl = `${url.protocol}//${url.host}`;
+  const storeSlug = storeSlugFromUrl(url);
+  const storeQs = storeSlug ? `?store=${encodeURIComponent(storeSlug)}` : '';
 
   const headers = SUPABASE_ANON_KEY ? {
     apikey: SUPABASE_ANON_KEY,
     Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
     'Content-Type': 'application/json',
+    ...storeHeaders(url),
   } : {};
 
   const escapeXml = (str) => {
@@ -70,7 +74,7 @@ export async function onRequest(context) {
     staticRoutes.forEach(route => {
       sitemap += `
   <url>
-    <loc>${escapeXml(`${baseUrl}${route.path}`)}</loc>
+    <loc>${escapeXml(`${baseUrl}${route.path}${storeQs}`)}</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>${route.changefreq}</changefreq>
     <priority>${route.priority}</priority>
@@ -83,7 +87,7 @@ export async function onRequest(context) {
         const catSlug = generateSlug(category.name);
         sitemap += `
   <url>
-    <loc>${escapeXml(`${baseUrl}/category/${catSlug}`)}</loc>
+    <loc>${escapeXml(`${baseUrl}/category/${catSlug}${storeQs}`)}</loc>
     <lastmod>${new Date(category.created_at || Date.now()).toISOString()}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.85</priority>
@@ -93,7 +97,7 @@ export async function onRequest(context) {
 
     // Products with Google Image extension
     products.forEach(product => {
-      const prodUrl = `${baseUrl}/product/${product.slug || product.id}`;
+      const prodUrl = `${baseUrl}/product/${product.slug || product.id}${storeQs}`;
       const prodTitle = escapeXml(product.title || 'Product');
       const allImages = [product.image, ...(Array.isArray(product.images) ? product.images : [])].filter(Boolean);
 
@@ -123,7 +127,7 @@ export async function onRequest(context) {
       if (page.slug) {
         sitemap += `
   <url>
-    <loc>${escapeXml(`${baseUrl}/pages/${page.slug}`)}</loc>
+    <loc>${escapeXml(`${baseUrl}/pages/${page.slug}${storeQs}`)}</loc>
     <lastmod>${new Date(page.created_at || Date.now()).toISOString()}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

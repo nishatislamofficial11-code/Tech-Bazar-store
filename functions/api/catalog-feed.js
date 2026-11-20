@@ -1,3 +1,4 @@
+import { storeHeaders, storeSlugFromUrl } from './_store-lib.js';
 /**
  * Cloudflare Pages Function for Live Facebook & TikTok Product Catalog Feed
  * Endpoints: /api/catalog-feed and /api/catalog-feed.php
@@ -12,6 +13,8 @@ export async function onRequest(context) {
 
   const urlObj = new URL(context.request.url);
   const siteUrl = urlObj.origin;
+  const storeSlug = storeSlugFromUrl(urlObj);
+  const storeQs = storeSlug ? `?store=${encodeURIComponent(storeSlug)}` : '';
   const format = urlObj.searchParams.get('format') || 'xml';
 
   const getBrandFromHost = (hostname) => {
@@ -33,7 +36,8 @@ export async function onRequest(context) {
         const prodRes = await fetch(`${SUPABASE_URL}/rest/v1/products?select=*&order=created_at.desc`, {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            ...storeHeaders(urlObj)
           }
         });
         if (prodRes.ok) {
@@ -46,7 +50,7 @@ export async function onRequest(context) {
       // 2. Fetch site title
       try {
         const settRes = await fetch(`${SUPABASE_URL}/rest/v1/settings?key=eq.siteName`, {
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, ...storeHeaders(urlObj) }
         });
         if (settRes.ok) {
           const settData = await settRes.json();
@@ -66,7 +70,7 @@ export async function onRequest(context) {
         const availability = (p.stock ?? 100) > 0 ? 'in stock' : 'out of stock';
         const condition = 'new';
         const price = `"${p.price || 0} BDT"`;
-        const link = `"${siteUrl}/product/${p.slug || p.id}"`;
+        const link = `"${siteUrl}/product/${p.slug || p.id}${storeQs}"`;
         const imageLink = `"${p.image || ''}"`;
         const brand = `"${(p.store || siteTitle).replace(/"/g, '""')}"`;
         return [id, title, description, availability, condition, price, link, imageLink, brand].join(',');
@@ -99,7 +103,7 @@ export async function onRequest(context) {
       const cleanDesc = (p.description || p.title || '').slice(0, 5000);
       const availability = (p.stock ?? 100) > 0 ? 'in stock' : 'out of stock';
       const price = `${Number(p.price || 0).toFixed(2)} BDT`;
-      const link = `${siteUrl}/product/${p.slug || p.id}`;
+      const link = `${siteUrl}/product/${p.slug || p.id}${storeQs}`;
       const imageLink = p.image || '';
       const brand = p.store || siteTitle;
 
@@ -121,7 +125,7 @@ export async function onRequest(context) {
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
   <channel>
     <title>${cdata(siteTitle)}</title>
-    <link>${siteUrl}</link>
+    <link>${siteUrl}/${storeQs}</link>
     <description>${cdata(`Facebook & TikTok Live Product Catalog Feed for ${siteTitle}`)}</description>
 ${itemsXml}
   </channel>

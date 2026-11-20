@@ -1,3 +1,4 @@
+import { storeHeaders } from './api/_store-lib.js';
 import { onRequest as catalogFeedHandler } from './api/catalog-feed.js';
 import { onRequest as courierProxyHandler } from './api/courier-proxy.js';
 import { onRequest as courierWebhookHandler } from './api/courier-webhook.js';
@@ -64,6 +65,7 @@ export async function onRequest(context) {
     apikey: SUPABASE_ANON_KEY,
     Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
     'Content-Type': 'application/json',
+    ...storeHeaders(url),
   } : {
     'Content-Type': 'application/json',
   };

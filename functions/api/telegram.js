@@ -28,7 +28,7 @@ export async function onRequest(context) {
 
     const { orderId } = await context.request.json();
 
-    if (!orderId || typeof orderId !== 'string' || !orderId.startsWith('ORD-')) {
+    if (!orderId || typeof orderId !== 'string' || !/^ORD-[A-Z0-9]{4,20}$/.test(orderId)) {
       return new Response(JSON.stringify({ ok: false, error: 'Invalid orderId' }), { 
         status: 400,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -42,7 +42,10 @@ export async function onRequest(context) {
     };
 
     // Fetch the order securely
-    const orderQuery = await fetch(`${SUPABASE_URL}/rest/v1/orders?shipping_address=like.*[TID:${orderId}]*&select=*,order_items(quantity,price,variant_options,products(title))&limit=1`, { headers });
+    // shipping_address is a jsonb column (LIKE filters don't work on it), so look through
+    // the last 10 minutes of orders and match the tracking id in code.
+    const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const orderQuery = await fetch(`${SUPABASE_URL}/rest/v1/orders?created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=200&select=id,store_id,created_at,total_amount,shipping_address,payment_method,advance_required,order_items(quantity,price,variant_options,products(title))`, { headers });
     
     if (!orderQuery.ok) {
        return new Response(JSON.stringify({ ok: false, error: 'Failed to query order' }), { 
@@ -51,7 +54,13 @@ export async function onRequest(context) {
        });
     }
     
-    const ordersData = await orderQuery.json();
+    const recentOrders = await orderQuery.json();
+    const tag = `[TID:${orderId}]`;
+    const ordersData = (recentOrders || []).filter(o => {
+      const addr = typeof o.shipping_address === 'string' ? o.shipping_address : JSON.stringify(o.shipping_address || '');
+      // Online-payment orders are announced by the payment callback once the money is confirmed
+      return addr.includes(tag) && !(Number(o.advance_required || 0) > 0);
+    });
     if (!ordersData || ordersData.length === 0) {
       return new Response(JSON.stringify({ ok: false, error: 'Order not found' }), { 
         status: 404,
@@ -73,7 +82,14 @@ export async function onRequest(context) {
     }
 
     // Fetch telegram settings from Supabase
-    const settingsRes = await fetch(`${SUPABASE_URL}/rest/v1/settings?select=key,value&key=in.(telegram_bot_token,telegram_chat_id,telegram_notifications_enabled,telegram_bots)`, { headers });
+    // Only this order's own store bots — never send a customer's details to another store
+    if (!dbOrder.store_id) {
+      return new Response(JSON.stringify({ ok: false, error: 'Order has no store' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+    const settingsRes = await fetch(`${SUPABASE_URL}/rest/v1/settings?select=key,value&store_id=eq.${dbOrder.store_id}&key=in.(telegram_bot_token,telegram_chat_id,telegram_notifications_enabled,telegram_bots)`, { headers });
     
     if (!settingsRes.ok) {
       return new Response(JSON.stringify({ ok: false, error: 'Failed to fetch settings' }), { 

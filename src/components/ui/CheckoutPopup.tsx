@@ -14,9 +14,8 @@ import { trackTiktokInitiateCheckout, trackTiktokCompletePayment } from '../../l
 import { sendTelegramOrderNotification } from '../../lib/telegramApi';
 import { trackEvent } from '../../lib/analytics';
 import { CheckoutPaymentOptions, useCheckoutPayment } from '../CheckoutPaymentOptions';
-import { paymentRequest } from '../../lib/storePaymentApi';
 import { paymentQuote } from '../../lib/paymentRules';
-import { createCheckoutOrder, rememberPayment } from '../../lib/checkoutOrder';
+import { createCheckoutOrder, rememberPayment, startOnlinePayment } from '../../lib/checkoutOrder';
 import { fetchClientIp, checkIsBlocked, trapBlacklistIp } from '../../lib/blacklist';
 import { 
   getDivisions, 
@@ -734,9 +733,16 @@ export function CheckoutPopup({
       setIncompleteOrderId(null);
 
       if (orderParams.advance_required > 0) {
-        rememberPayment(orderParams, usingLocalItems ? [] : currentItems);
-        const { redirectUrl } = await paymentRequest<{ redirectUrl: string }>('initiate', { orderId: orderParams.id, token: orderParams.checkout_token });
-        window.location.assign(redirectUrl);
+        const payGeo = resolveBdLocation(address, deliveryArea);
+        rememberPayment(orderParams, usingLocalItems ? [] : currentItems, {
+          pixel: {
+            id: trackingId,
+            total_amount: orderTotal,
+            items: currentItems.map(item => ({ id: item.product.id, title: item.product.title || item.product.name, price: getItemPrice(item.product), quantity: item.quantity })),
+          },
+          customer: { phone: phone ? phone.trim() : undefined, name: fullName ? fullName.trim() : undefined, address: address ? address.trim() : undefined, city: payGeo.city, state: payGeo.state, country: 'bd' },
+        });
+        await startOnlinePayment(orderParams);
         return;
       }
 

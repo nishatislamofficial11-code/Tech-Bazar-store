@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { currentStoreSlug } from '../../lib/currentStore';
 import { supabase } from '../../lib/supabase';
 import { useSettings } from '../../contexts/SettingsContext';
 import { initFacebookPixel, sendServerEvent, generateEventId } from '../../lib/fbPixel';
@@ -344,8 +345,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     return <LoadingSpinner fullScreen message="Loading tracking configuration..." />;
   }
 
-  const liveXmlFeedUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/catalog-feed.php` : '/api/catalog-feed.php';
-  const liveCsvFeedUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/catalog-feed.php?format=csv` : '/api/catalog-feed.php?format=csv';
+  const feedStore = currentStoreSlug ? `store=${encodeURIComponent(currentStoreSlug)}` : '';
+  const liveXmlFeedUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/catalog-feed.php${feedStore ? `?${feedStore}` : ''}` : '/api/catalog-feed.php';
+  const liveCsvFeedUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/catalog-feed.php?format=csv${feedStore ? `&${feedStore}` : ''}` : '/api/catalog-feed.php?format=csv';
 
   return (
     <div className="max-w-6xl mx-auto pb-16 px-4 sm:px-6 font-sans">

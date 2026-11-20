@@ -1,3 +1,5 @@
+import { resolveStore } from './_store-lib.js';
+
 export async function onRequest(context) {
   // Handle CORS for browser preflight requests
   if (context.request.method === 'OPTIONS') {
@@ -29,10 +31,21 @@ export async function onRequest(context) {
     }
 
     const body = await context.request.json().catch(() => ({}));
-    const phone = String(body.phone || '').trim();
-    const clientIp = String(body.ip || '').trim();
-    const deviceId = String(body.deviceId || '').trim();
-    const customReason = body.reason ? String(body.reason).trim() : '';
+    // Keep inputs short so the list can't be stuffed with junk
+    const phone = String(body.phone || '').trim().slice(0, 20);
+    const clientIp = String(body.ip || '').trim().slice(0, 45);
+    const deviceId = String(body.deviceId || '').trim().slice(0, 100);
+    const customReason = body.reason ? String(body.reason).trim().slice(0, 200) : '';
+
+    // Every store keeps its own blacklist
+    const anonKey = context.env?.VITE_SUPABASE_ANON_KEY || context.env?.SUPABASE_ANON_KEY;
+    const store = await resolveStore({ url: SUPABASE_URL, anonKey, serviceKey: SUPABASE_SERVICE_KEY }, body.store, '');
+    if (!store) {
+      return new Response(JSON.stringify({ ok: false, error: 'Store not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
 
     if (!phone && !clientIp && !deviceId) {
       return new Response(JSON.stringify({ ok: false, error: 'Phone, Device ID or IP required' }), {
@@ -56,7 +69,7 @@ export async function onRequest(context) {
     let list = [];
     let pageRecordId = null;
 
-    const pageRes = await fetch(`${SUPABASE_URL}/rest/v1/pages?slug=eq.__system_fraud_blacklist&select=id,content`, { headers });
+    const pageRes = await fetch(`${SUPABASE_URL}/rest/v1/pages?slug=eq.__system_fraud_blacklist&store_id=eq.${store.id}&select=id,content`, { headers });
     if (pageRes.ok) {
       const pageData = await pageRes.json();
       if (pageData && pageData.length > 0) {
@@ -115,11 +128,12 @@ export async function onRequest(context) {
     }
 
     if (changed) {
+      if (list.length > 5000) list = list.slice(0, 5000);
       const jsonStr = JSON.stringify(list);
 
       // Save to pages
       if (pageRecordId) {
-        await fetch(`${SUPABASE_URL}/rest/v1/pages?id=eq.${pageRecordId}`, {
+        await fetch(`${SUPABASE_URL}/rest/v1/pages?id=eq.${pageRecordId}&store_id=eq.${store.id}`, {
           method: 'PATCH',
           headers,
           body: JSON.stringify({ content: jsonStr, updated_at: new Date().toISOString() })
@@ -131,14 +145,15 @@ export async function onRequest(context) {
           body: JSON.stringify({
             slug: '__system_fraud_blacklist',
             title: 'System Blacklist',
-            content: jsonStr
+            content: jsonStr,
+            store_id: store.id
           })
         });
       }
 
       // Save to settings as backup
       try {
-        const settRes = await fetch(`${SUPABASE_URL}/rest/v1/settings?key=eq.fraud_blacklist&select=id`, { headers });
+        const settRes = await fetch(`${SUPABASE_URL}/rest/v1/settings?key=eq.fraud_blacklist&store_id=eq.${store.id}&select=id`, { headers });
         if (settRes.ok) {
           const settData = await settRes.json();
           if (settData && settData.length > 0) {
@@ -151,7 +166,7 @@ export async function onRequest(context) {
             await fetch(`${SUPABASE_URL}/rest/v1/settings`, {
               method: 'POST',
               headers,
-              body: JSON.stringify({ key: 'fraud_blacklist', value: jsonStr })
+              body: JSON.stringify({ key: 'fraud_blacklist', value: jsonStr, store_id: store.id })
             });
           }
         }

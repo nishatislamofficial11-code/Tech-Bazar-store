@@ -9,13 +9,19 @@ const credentialFields = {
   eps: ['username', 'password', 'hash_key', 'merchant_id', 'store_id'],
   aamarpay: ['store_id', 'signature_key'],
 };
+const fieldLabels: Record<string, string> = {
+  store_id: 'Store ID', store_passwd: 'Store Password', signature_key: 'Signature Key',
+  username: 'Username', password: 'Password', hash_key: 'Hash Key', merchant_id: 'Merchant ID',
+};
 export function StorePaymentSettings() {
   const [settings, setSettings] = useState(defaultPaymentSettings);
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
-  useEffect(() => { let active = true; readPaymentSettings().then(value => { if (active) { setSettings(value); setReady(true); } }).catch(error => { if (active) setMessage(error.message); }); return () => { active = false; }; }, []);
+  const [loadError, setLoadError] = useState('');
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => { let active = true; setLoadError(''); readPaymentSettings().then(value => { if (active) { setSettings(value); setReady(true); } }).catch(error => { if (active) setLoadError(error instanceof Error ? error.message : 'পেমেন্ট সেটিংস লোড হয়নি'); }); return () => { active = false; }; }, [attempt]);
   async function save() {
     if (!ready || busy) return;
     setBusy(true); setMessage('');
@@ -28,6 +34,7 @@ export function StorePaymentSettings() {
     finally { setBusy(false); }
   }
   return <section className="space-y-6 py-6 text-payment-text">
+    {loadError && <div role="alert" className="space-y-2 rounded-lg border border-payment-border p-4 text-sm"><p className="font-bold">পেমেন্ট সেটিংস লোড হয়নি</p><p>{loadError}</p><button type="button" onClick={() => setAttempt(a => a + 1)} className="rounded-lg border border-payment-border px-3 py-1.5">আবার চেষ্টা করুন</button></div>}
     {message && <p role="status" className="flex items-center gap-2 border-b border-payment-border pb-4 text-sm"><LockKeyhole size={18} />{message}</p>}
     <fieldset className="space-y-3">
       <legend className="mb-3 text-sm font-bold">পেমেন্ট পদ্ধতি</legend>
@@ -42,7 +49,7 @@ export function StorePaymentSettings() {
     </div>
     <fieldset disabled={!ready} className="grid max-w-xl gap-4 sm:grid-cols-2">
       <legend className="mb-3 text-sm font-bold">নিজের merchant account {settings.configured ? '— সংযুক্ত' : '— সংযুক্ত নয়'}</legend>
-      {credentialFields[settings.gateway].map(field => <label key={field} className="space-y-2 text-sm"><span>{field.replaceAll('_', ' ')}</span><input aria-label={field} type="password" autoComplete="new-password" value={credentials[field] || ''} placeholder={settings.configured ? 'সংরক্ষিত — বদলাতে নতুনটি দিন' : ''} onChange={event => setCredentials({ ...credentials, [field]: event.target.value })} className="w-full rounded-lg border border-payment-border bg-payment-surface px-3 py-2 disabled:opacity-50" /></label>)}
+      {credentialFields[settings.gateway].map(field => <label key={field} className="space-y-2 text-sm"><span>{fieldLabels[field] || field}</span><input aria-label={field} type="password" autoComplete="new-password" value={credentials[field] || ''} placeholder={settings.configured ? 'সংরক্ষিত — বদলাতে নতুনটি দিন' : ''} onChange={event => setCredentials({ ...credentials, [field]: event.target.value })} className="w-full rounded-lg border border-payment-border bg-payment-surface px-3 py-2 disabled:opacity-50" /></label>)}
     </fieldset>
     <PaymentButton type="button" disabled={!ready || busy} onClick={save}><Save size={16} />{busy ? 'সংরক্ষণ হচ্ছে…' : 'পেমেন্ট সেটিংস সংরক্ষণ'}</PaymentButton>
   </section>;

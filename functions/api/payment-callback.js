@@ -1,4 +1,5 @@
-import { money, validateSettlement, verifyPayment } from './_payment-lib.js';
+import { money, validateSettlement, verifyPayment, isAttemptId } from './_payment-lib.js';
+import { serverConfig, rest, notifyStoreTelegram, escapeHtml } from './_store-lib.js';
 
 async function readParams(request) {
   const url = new URL(request.url);
@@ -19,87 +20,109 @@ async function readParams(request) {
   return params;
 }
 
+// Sends the customer back to their own store with the result.
 function redirectTo(requestUrl, storeSlug, orderId, outcome) {
-  const qs = new URLSearchParams({ store: storeSlug, order: orderId, payment: outcome });
+  const qs = new URLSearchParams({ payment: outcome });
+  if (storeSlug) qs.set('store', storeSlug);
+  if (orderId) qs.set('order', orderId);
   return Response.redirect(new URL(`/?${qs.toString()}`, requestUrl).toString(), 303);
+}
+
+async function sendPaidNotification(cfg, order, gateway, amount, transaction) {
+  const items = await rest(cfg, `order_items?order_id=eq.${order.id}&select=quantity,price,variant_options,products(title)`);
+  const lines = (items || []).map((i) => {
+    let title = escapeHtml(i.products?.title || 'Product');
+    if (i.variant_options && typeof i.variant_options === 'object') {
+      title += ` (${escapeHtml(Object.entries(i.variant_options).map(([k, v]) => `${k}: ${v}`).join(', '))})`;
+    }
+    return `  • <b>${title}</b> (x${i.quantity}) - ৳${(Number(i.price) * Number(i.quantity)).toFixed(2)}`;
+  }).join('\n') || '  • Item details not found';
+  const due = Math.max(0, Number(order.total_amount || 0) - Number(order.advance_paid || 0) - amount);
+  const time = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka', dateStyle: 'medium', timeStyle: 'short' });
+  const message = `<b>🛒 NEW ORDER — ✅ ONLINE PAYMENT RECEIVED</b>
+
+${escapeHtml(typeof order.shipping_address === 'string' ? order.shipping_address : '')}
+
+<b>📦 Purchased Products:</b>
+${lines}
+
+<b>💳 Paid online:</b> ৳${amount.toFixed(2)} (${escapeHtml(gateway)}, ${escapeHtml(transaction)})
+<b>💰 Order total:</b> ৳${Number(order.total_amount || 0).toFixed(2)}
+<b>🧾 Due on delivery:</b> ৳${due.toFixed(2)}
+<b>🕒 Time (BD):</b> ${time}`;
+  await notifyStoreTelegram(cfg, order.store_id, message);
 }
 
 async function handle(context) {
   const params = await readParams(context.request);
   const gateway = params['gateway'];
   const status = params['status'] || '';
-  const orderId = params['tran_id'] || params['mer_txnid'] || params['MerchantTransactionId'] || params['merchantTransactionId'] || params['order'] || '';
+  const attemptId = params['tran_id'] || params['mer_txnid'] || params['MerchantTransactionId'] || params['merchantTransactionId'] || '';
 
-  if (!['sslcommerz', 'eps', 'aamarpay'].includes(gateway) || !orderId) {
-    return new Response(JSON.stringify({ error: 'অনুরোধ সঠিক নয়' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  if (!['sslcommerz', 'eps', 'aamarpay'].includes(gateway) || !isAttemptId(attemptId)) {
+    return redirectTo(context.request.url, '', '', 'failed');
   }
 
-  const url = context.env.VITE_SUPABASE_URL || context.env.SUPABASE_URL;
-  const serviceKey = context.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) {
-    return new Response(JSON.stringify({ error: 'সার্ভার কনফিগারেশন অসম্পূর্ণ' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  let cfg;
+  try {
+    cfg = serverConfig(context.env);
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
-  const rest = async (path, options = {}) => {
-    const res = await fetch(`${url}/rest/v1/${path}`, {
-      ...options,
-      headers: {
-        apikey: serviceKey,
-        Authorization: `Bearer ${serviceKey}`,
-        'Content-Type': 'application/json',
-        ...(options.headers || {}),
-      },
-    });
-    if (!res.ok) throw new Error(`ডাটাবেস সমস্যা (${res.status})`);
-    const text = await res.text();
-    return text ? JSON.parse(text) : null;
-  };
 
-  const orders = await rest(`orders?id=eq.${orderId}&select=id,store_id,total_amount,advance_required,advance_paid,payment_status,stores(slug)&limit=1`);
+  const attempts = await rest(cfg, `payment_attempts?id=eq.${attemptId}&select=id,order_id,store_id,gateway,stores(slug)&limit=1`);
+  const attempt = attempts?.[0];
+  if (!attempt || attempt.gateway !== gateway) return redirectTo(context.request.url, '', '', 'failed');
+  const storeSlug = attempt.stores?.slug || '';
+
+  const orders = await rest(cfg, `orders?id=eq.${attempt.order_id}&store_id=eq.${attempt.store_id}&select=id,store_id,total_amount,advance_required,advance_paid,payment_status,payment_transaction_id,shipping_address&limit=1`);
   const order = orders?.[0];
-  if (!order || !order.store_id) {
-    return new Response(JSON.stringify({ error: 'অর্ডার পাওয়া যায়নি' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
-  }
-  const storeSlug = order.stores?.slug || '';
+  if (!order) return redirectTo(context.request.url, storeSlug, '', 'failed');
 
-  if (status === 'cancelled') return redirectTo(context.request.url, storeSlug, orderId, 'cancelled');
-  if (status === 'failed') return redirectTo(context.request.url, storeSlug, orderId, 'failed');
+  if (status === 'cancelled') return redirectTo(context.request.url, storeSlug, order.id, 'cancelled');
+  if (status === 'failed') return redirectTo(context.request.url, storeSlug, order.id, 'failed');
 
-  // Idempotency: settle only once
+  // Already settled (e.g. IPN arrived before the customer's redirect)
   if (order.payment_status === 'paid' || order.payment_status === 'partial') {
-    return redirectTo(context.request.url, storeSlug, orderId, 'success');
+    return redirectTo(context.request.url, storeSlug, order.id, 'success');
   }
-
-  const gwRows = await rest(`store_payment_gateways?store_id=eq.${order.store_id}&gateway=eq.${gateway}&is_active=eq.true&select=credentials&limit=1`);
-  const credentials = gwRows?.[0]?.credentials;
-  if (!credentials) return redirectTo(context.request.url, storeSlug, orderId, 'failed');
-
-  const envRows = await rest(`settings?store_id=eq.${order.store_id}&key=eq.payment_environment&select=value&limit=1`);
-  const config = {
-    gateway,
-    environment: envRows?.[0]?.value === 'live' ? 'live' : 'sandbox',
-    credentials,
-  };
 
   try {
+    const gwRows = await rest(cfg, `store_payment_gateways?store_id=eq.${order.store_id}&gateway=eq.${gateway}&select=credentials&limit=1`);
+    const credentials = gwRows?.[0]?.credentials;
+    if (!credentials) return redirectTo(context.request.url, storeSlug, order.id, 'failed');
+    const envRows = await rest(cfg, `settings?store_id=eq.${order.store_id}&key=eq.payment_environment&select=value&limit=1`);
+    const config = { gateway, environment: envRows?.[0]?.value === 'live' ? 'live' : 'sandbox', credentials };
+
+    // Ask the gateway itself whether the money really arrived
     const verified = await verifyPayment(config, params);
     const expected = money(Number(order.advance_required || 0) - Number(order.advance_paid || 0));
     const ok = validateSettlement(
-      { transaction: order.id, amount: expected, currency: 'BDT', store: order.store_id },
+      { transaction: attempt.id, amount: expected, currency: 'BDT', store: order.store_id },
       { transaction: verified.transaction, amount: verified.amount, currency: verified.currency, store: order.store_id, successful: verified.successful },
     );
-    if (!ok) return redirectTo(context.request.url, storeSlug, orderId, 'failed');
+    if (!ok) return redirectTo(context.request.url, storeSlug, order.id, 'failed');
 
-    const settled = await rest('rpc/settle_verified_payment', {
-      method: 'POST', body: JSON.stringify({ target_order: order.id, verified_amount: verified.amount,
-        gateway_name: gateway, gateway_transaction: verified.gatewayTransactionId }),
+    const settled = await rest(cfg, 'rpc/settle_verified_payment', {
+      method: 'POST',
+      body: JSON.stringify({ target_order: order.id, verified_amount: verified.amount, gateway_name: gateway, gateway_transaction: verified.gatewayTransactionId }),
     });
-    if (settled !== true) return redirectTo(context.request.url, storeSlug, orderId, 'failed');
-    return redirectTo(context.request.url, storeSlug, orderId, 'success');
+    if (settled !== true) return redirectTo(context.request.url, storeSlug, order.id, 'failed');
+
+    // Tell the store owner (their own Telegram bots only). Never block the customer on this.
+    const notify = sendPaidNotification(cfg, order, gateway, verified.amount, verified.gatewayTransactionId).catch(() => {});
+    if (context.waitUntil) context.waitUntil(notify); else await notify;
+
+    return redirectTo(context.request.url, storeSlug, order.id, 'success');
   } catch {
-    return redirectTo(context.request.url, storeSlug, orderId, 'failed');
+    return redirectTo(context.request.url, storeSlug, order.id, 'failed');
   }
 }
 
 export async function onRequest(context) {
-  return handle(context);
+  try {
+    return await handle(context);
+  } catch {
+    return redirectTo(context.request.url, '', '', 'failed');
+  }
 }

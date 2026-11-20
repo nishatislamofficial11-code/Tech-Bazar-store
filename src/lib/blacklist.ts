@@ -1,3 +1,4 @@
+import { currentStoreSlug } from './currentStore';
 import { supabase } from './supabase';
 
 export interface BlacklistedUser {
@@ -273,7 +274,8 @@ export const trapBlacklistIp = async (phone: string, ip?: string, reason?: strin
         ip: targetIp,
         deviceId: currentDeviceId,
         fingerprint: compositeFingerprint,
-        reason: reason || 'Auto-trapped device on fraud attempt'
+        reason: reason || 'Auto-trapped device on fraud attempt',
+        store: currentStoreSlug
       })
     });
     if (res.ok) {

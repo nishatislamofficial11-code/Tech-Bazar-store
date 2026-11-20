@@ -25,8 +25,7 @@ import {
 import { fetchClientIp, checkIsBlocked, trapBlacklistIp } from '../lib/blacklist';
 import { trackEvent } from '../lib/analytics';
 import { CheckoutPaymentOptions, useCheckoutPayment } from '../components/CheckoutPaymentOptions';
-import { createCheckoutOrder, rememberPayment } from '../lib/checkoutOrder';
-import { paymentRequest } from '../lib/storePaymentApi';
+import { createCheckoutOrder, rememberPayment, startOnlinePayment } from '../lib/checkoutOrder';
 import { paymentQuote } from '../lib/paymentRules';
 
 export default function Checkout() {
@@ -521,9 +520,16 @@ export default function Checkout() {
 
       // Online payment: send the customer to the gateway page
       if (orderParams.advance_required > 0) {
-        rememberPayment(orderParams, items);
-        const { redirectUrl } = await paymentRequest<{ redirectUrl: string }>('initiate', { orderId: orderParams.id, token: orderParams.checkout_token });
-        window.location.href = redirectUrl;
+        const payGeo = resolveBdLocation(address, deliveryArea);
+        rememberPayment(orderParams, items, {
+          pixel: {
+            id: trackingId,
+            total_amount: orderTotal,
+            items: items.map(item => ({ id: item.product.id, title: item.product.title || item.product.name, price: getItemPrice(item.product), quantity: item.quantity })),
+          },
+          customer: { phone: phone ? phone.trim() : undefined, name: fullName ? fullName.trim() : undefined, address: address ? address.trim() : undefined, city: payGeo.city, state: payGeo.state, country: 'bd' },
+        });
+        await startOnlinePayment(orderParams);
         return;
       }
 

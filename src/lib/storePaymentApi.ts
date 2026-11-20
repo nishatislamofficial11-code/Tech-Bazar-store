@@ -1,4 +1,5 @@
 import { rawSupabase } from './supabase';
+import { currentStoreSlug } from './currentStore';
 import { paymentMethods, gatewayNames, type PaymentMethod, type GatewayName } from './paymentRules';
 
 export interface StorePaymentSettings {
@@ -13,14 +14,21 @@ export const defaultPaymentSettings: StorePaymentSettings = {
 };
 export async function paymentRequest<T>(action: string, data?: unknown): Promise<T> {
   const { data: { session } } = await rawSupabase.auth.getSession();
-  const store = typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('store') || localStorage.getItem('current_store_slug') || '';
-  const response = await fetch('/api/store-payments', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
-    body: JSON.stringify({ action, store, data }),
-  });
-  if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw new Error('নিরাপদ পেমেন্ট সংযোগ এখনো চালু হয়নি।');
-  const result = await response.json();
-  if (result.error) throw new Error(result.error);
+  let response: Response;
+  try {
+    response = await fetch('/api/store-payments', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+      body: JSON.stringify({ action, store: currentStoreSlug, data }),
+    });
+  } catch {
+    throw new Error('ইন্টারনেট সংযোগে সমস্যা, আবার চেষ্টা করুন।');
+  }
+  if (!response.headers.get('content-type')?.includes('application/json')) {
+    throw new Error(`পেমেন্ট সার্ভার পাওয়া যায়নি (HTTP ${response.status})। সাইটের সার্ভার সেটআপ দেখুন।`);
+  }
+  const result = await response.json().catch(() => null);
+  if (!result) throw new Error('পেমেন্ট সার্ভারের উত্তর বোঝা যায়নি।');
+  if (result.error || !response.ok) throw new Error(result.error || `পেমেন্ট সার্ভারে সমস্যা (HTTP ${response.status})`);
   return result as T;
 }
 export async function readPaymentSettings() {

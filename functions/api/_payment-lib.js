@@ -13,6 +13,45 @@ export function validateSettlement(payment, verified) {
     money(payment.amount) === money(verified.amount);
 }
 
+// Short numeric id sent to the gateway for one payment session (SSLCommerz allows max 30 chars).
+export function newAttemptId() {
+  const rand = new Uint32Array(2);
+  crypto.getRandomValues(rand);
+  return `${Date.now()}${String(rand[0] % 10000000).padStart(7, '0')}`;
+}
+export const isAttemptId = (value) => /^[0-9]{12,30}$/.test(String(value || ''));
+export const isUuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || ''));
+
+// Fields each gateway needs, as stored in store_payment_gateways.credentials
+export const REQUIRED_CREDENTIALS = {
+  sslcommerz: ['store_id', 'password'],
+  aamarpay: ['store_id', 'password'],
+  eps: ['username', 'password', 'hash_key', 'merchant_id', 'store_id'],
+};
+export function missingCredentials(gateway, c) {
+  return (REQUIRED_CREDENTIALS[gateway] || []).filter((k) => !String(c?.[k] || '').trim());
+}
+
+// EPS signs every request: x-hash = Base64(HMAC-SHA512(hash_key, value))
+async function epsHash(hashKey, value) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(hashKey), { name: 'HMAC', hash: 'SHA-512' }, false, ['sign']);
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(String(value))));
+  let bin = '';
+  for (const b of sig) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+async function epsToken(config) {
+  const c = config.credentials;
+  const data = await postJson(`${epsBase(config.environment)}/Auth/GetToken`,
+    { userName: c.username, password: c.password },
+    { 'x-hash': await epsHash(c.hash_key, c.username) });
+  const token = data?.token || data?.Token;
+  if (!token) throw new Error(`EPS প্রমাণীকরণ ব্যর্থ${data?.errorMessage ? `: ${data.errorMessage}` : ''}`);
+  return token;
+}
+
 const sslBase = (env) => env === 'live' ? 'https://securepay.sslcommerz.com' : 'https://sandbox.sslcommerz.com';
 const epsBase = (env) => env === 'live' ? 'https://pgapi.eps.com.bd/v1' : 'https://sandboxpgapi.eps.com.bd/v1';
 const aamarBase = (env) => env === 'live' ? 'https://secure.aamarpay.com' : 'https://sandbox.aamarpay.com';
@@ -42,6 +81,10 @@ export async function initiatePayment(config, input) {
   if (amount <= 0) throw new Error('পেমেন্টের পরিমাণ শূন্য হতে পারে না');
   const cb = `${input.callbackBase}?gateway=${config.gateway}`;
   const c = config.credentials;
+  const tranId = input.transactionId;
+  if (!isAttemptId(tranId)) throw new Error('লেনদেন আইডি সঠিক নয়');
+  const missing = missingCredentials(config.gateway, c);
+  if (missing.length) throw new Error(`গেটওয়ের তথ্য অসম্পূর্ণ: ${missing.join(', ')}`);
 
   if (config.gateway === 'sslcommerz') {
     const data = await postForm(`${sslBase(config.environment)}/gwprocess/v4/api.php`, {
@@ -49,7 +92,7 @@ export async function initiatePayment(config, input) {
       store_passwd: c.password,
       total_amount: amount.toFixed(2),
       currency: input.currency || 'BDT',
-      tran_id: input.orderId,
+      tran_id: tranId,
       success_url: `${cb}&status=success`,
       fail_url: `${cb}&status=failed`,
       cancel_url: `${cb}&status=cancelled`,
@@ -75,7 +118,7 @@ export async function initiatePayment(config, input) {
     const data = await postJson(`${aamarBase(config.environment)}/jsonpost.php`, {
       store_id: c.store_id,
       signature_key: c.password,
-      tran_id: input.orderId,
+      tran_id: tranId,
       success_url: `${cb}&status=success`,
       fail_url: `${cb}&status=failed`,
       cancel_url: `${cb}&status=cancelled`,
@@ -91,40 +134,41 @@ export async function initiatePayment(config, input) {
       opt_a: input.orderId,
       type: 'json',
     });
-    if (data?.result !== 'true' || !data?.payment_url) throw new Error('aamarPay সেশন তৈরি হয়নি');
+    if (String(data?.result) !== 'true' || !data?.payment_url) throw new Error(`aamarPay সেশন তৈরি হয়নি${typeof data === 'string' ? `: ${data}` : ''}`);
     return { redirectUrl: data.payment_url };
   }
 
   // EPS
-  const tokenData = await postForm(`${epsBase(config.environment)}/Auth/GetToken`, {
-    userName: c.username || '',
-    password: c.password,
-  });
-  const token = tokenData?.token;
-  if (!token) throw new Error('EPS প্রমাণীকরণ ব্যর্থ');
+  const token = await epsToken(config);
   const data = await postJson(
-    `${epsBase(config.environment)}/EPSEngine/InitiatePayment`,
+    `${epsBase(config.environment)}/EPSEngine/InitializeEPS`,
     {
-      merchantId: c.merchant_id || c.store_id,
+      merchantId: c.merchant_id,
       storeId: c.store_id,
       CustomerOrderId: input.orderId,
-      merchantTransactionId: input.orderId,
+      merchantTransactionId: tranId,
       transactionTypeId: 1,
       totalAmount: amount,
       successUrl: `${cb}&status=success`,
       failUrl: `${cb}&status=failed`,
       cancelUrl: `${cb}&status=cancelled`,
       customerName: input.customerName,
-      customerPhone: input.customerPhone,
-      customerAddress: input.customerAddress,
-      customerCity: 'Dhaka',
-      customerCountry: 'BD',
-      productList: [{ ProductName: input.productName.slice(0, 200), NoOfItem: 1, ProductPrice: amount }],
+      customerEmail: 'customer@example.com',
+      CustomerAddress: input.customerAddress,
+      CustomerCity: 'Dhaka',
+      CustomerState: 'Dhaka',
+      CustomerPostcode: '1000',
+      CustomerCountry: 'BD',
+      CustomerPhone: input.customerPhone,
+      ProductName: input.productName.slice(0, 200),
+      NoOfItem: 1,
+      ProductProfile: 'general',
+      ProductCategory: 'Ecommerce',
     },
-    { Authorization: `Bearer ${token}` },
+    { Authorization: `Bearer ${token}`, 'x-hash': await epsHash(c.hash_key, tranId) },
   );
   const redirectUrl = data?.RedirectURL || data?.redirectUrl;
-  if (!redirectUrl) throw new Error('EPS সেশন তৈরি হয়নি');
+  if (!redirectUrl) throw new Error(`EPS সেশন তৈরি হয়নি${data?.ErrorMessage ? `: ${data.ErrorMessage}` : ''}`);
   return { redirectUrl };
 }
 
@@ -168,16 +212,12 @@ export async function verifyPayment(config, params) {
   }
 
   // EPS
-  const tokenData = await postForm(`${epsBase(config.environment)}/Auth/GetToken`, {
-    userName: c.username || '',
-    password: c.password,
-  });
-  const token = tokenData?.token;
-  if (!token) throw new Error('EPS প্রমাণীকরণ ব্যর্থ');
   const merchantTrx = params['MerchantTransactionId'] || params['merchantTransactionId'] || '';
+  if (!isAttemptId(merchantTrx)) throw new Error('EPS লেনদেন আইডি সঠিক নয়');
+  const token = await epsToken(config);
   const res = await fetch(
     `${epsBase(config.environment)}/EPSEngine/CheckMerchantTransactionStatus?merchantTransactionId=${encodeURIComponent(merchantTrx)}`,
-    { headers: { Authorization: `Bearer ${token}` } },
+    { headers: { Authorization: `Bearer ${token}`, 'x-hash': await epsHash(c.hash_key, merchantTrx) } },
   );
   if (!res.ok) throw new Error('EPS যাচাই ব্যর্থ');
   const data = await res.json();
