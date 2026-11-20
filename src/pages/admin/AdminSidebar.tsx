@@ -8,6 +8,7 @@ import {
   Search, X, PanelLeftClose, PanelLeft, 
   Globe, Receipt, Box, LifeBuoy, Settings, CreditCard,
   ChevronDown, ChevronRight, Gem, UserRound,
+  MessagesSquare, BookOpen, Bot, Plug,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { buildCloudinaryUrl } from '../../lib/cloudinary';
@@ -71,6 +72,10 @@ export const NAV_ITEMS: NavItemDef[] = [
     ]
   },
   { section: 'Team', name: 'Team', path: '/admin/users', icon: Users, adminOnly: true },
+  { section: 'AI Automation', name: 'AI Inbox', path: '/admin/ai/inbox', icon: MessagesSquare },
+  { section: 'AI Automation', name: 'Knowledge Base', path: '/admin/ai/knowledge', icon: BookOpen },
+  { section: 'AI Automation', name: 'AI Settings', path: '/admin/ai/settings', icon: Bot },
+  { section: 'AI Automation', name: 'Connections', path: '/admin/ai/connections', icon: Plug, adminOnly: true },
   { section: 'Shop & Growth', name: 'Appearance', path: '/admin/customize', icon: Paintbrush, adminOnly: true },
   { section: 'Shop & Growth', name: 'SEO', path: '/admin/seo', icon: SearchCheck, adminOnly: true },
 ];
@@ -182,7 +187,7 @@ export function AdminSidebar({
     const q = searchQuery.toLowerCase().trim();
     return availableItems.filter((item) => item.name.toLowerCase().includes(q));
   }, [availableItems, searchQuery]);
-  const sectionOrder = ['', 'Shop & Growth', 'Sales Tools', 'Team'];
+  const sectionOrder = ['', 'Shop & Growth', 'Sales Tools', 'Team', 'AI Automation'];
   const grouped = useMemo(() => sectionOrder
     .map((sec) => ({ sec, items: filteredItems.filter((i) => (i.section || '') === sec) }))
     .filter((g) => g.items.length > 0), [filteredItems]);

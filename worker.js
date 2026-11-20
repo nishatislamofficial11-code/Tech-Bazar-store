@@ -6,6 +6,7 @@ import { onRequest as telegramNotify } from './functions/api/telegram.js';
 import { onRequest as telegramAdmin } from './functions/api/telegram-admin.js';
 import { onRequest as track } from './functions/api/track.js';
 import { onRequest as otp } from './functions/api/otp.js';
+import { onRequest as aiChat } from './functions/api/ai-chat.js';
 import { onRequest as middleware } from './functions/_middleware.js';
 
 const routes = {
@@ -15,6 +16,7 @@ const routes = {
   '/api/telegram-admin': telegramAdmin,
   '/api/track': track,
   '/api/otp': otp,
+  '/api/ai-chat': aiChat,
 };
 
 export default {

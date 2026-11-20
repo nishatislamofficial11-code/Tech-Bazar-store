@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { Store, Copy, LogOut, RefreshCw, CheckCircle2, XCircle, Settings2, Trash2, Search } from 'lucide-react';
 import { filterStores } from '../../lib/storeSearch';
 import { PlanBadge, PlanActions, PlatformSettingsCard, LandingSettingsCard, SmsSettingsCard, SuperCreateStoreForm, type PlanInfo } from '../../components/superadmin/PlatformControls';
+import { AiSuperCard } from '../../components/superadmin/AiSuperCard';
 
 interface StoreRow extends PlanInfo {
   id: string;
@@ -16,8 +17,8 @@ interface StoreRow extends PlanInfo {
 }
 
 
-const TABS: ['stores' | 'new' | 'plan' | 'sms' | 'landing', string][] = [
-  ['stores', 'সব দোকান'], ['new', 'নতুন দোকান'], ['plan', 'সাইন আপ ও প্ল্যান'], ['sms', 'SMS'], ['landing', 'ল্যান্ডিং পেজ'],
+const TABS: ['stores' | 'new' | 'plan' | 'sms' | 'ai' | 'landing', string][] = [
+  ['stores', 'সব দোকান'], ['new', 'নতুন দোকান'], ['plan', 'সাইন আপ ও প্ল্যান'], ['sms', 'SMS'], ['ai', 'AI'], ['landing', 'ল্যান্ডিং পেজ'],
 ];
 
 export default function SuperAdminDashboard() {
@@ -28,7 +29,7 @@ export default function SuperAdminDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const filteredStores: StoreRow[] = filterStores<StoreRow>(stores, search);
-  const [tab, setTab] = useState<'stores' | 'new' | 'plan' | 'sms' | 'landing'>('stores');
+  const [tab, setTab] = useState<'stores' | 'new' | 'plan' | 'sms' | 'ai' | 'landing'>('stores');
   const pendingCount = stores.filter((s) => s.status === 'pending').length;
 
 
@@ -363,6 +364,7 @@ export default function SuperAdminDashboard() {
         {tab === 'new' && <SuperCreateStoreForm onCreated={() => { loadStores(); }} />}
         {tab === 'plan' && <PlatformSettingsCard />}
         {tab === 'sms' && <SmsSettingsCard />}
+        {tab === 'ai' && <AiSuperCard stores={stores} />}
         {tab === 'landing' && <LandingSettingsCard />}
       </main>
     </div>
