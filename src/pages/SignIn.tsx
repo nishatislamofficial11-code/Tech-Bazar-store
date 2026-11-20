@@ -36,14 +36,14 @@ export default function SignIn() {
       await supabase.auth.signOut();
       toast.error('এই স্টোরে আপনার কোনো অ্যাকাউন্ট নেই। অনুগ্রহ করে সাইন আপ করুন।');
     } else {
-      // Store owners and staff log in only through the Cloud Commerce login, not a shop's customer page
+      // Owner/staff/super admin accounts don't exist on a shop's customer login:
+      // answer exactly like an unknown account, with no hint about the admin login.
       const [{ data: ownStore }, { data: isSuper }] = await Promise.all([
         supabase.rpc('my_store'), supabase.rpc('is_super_admin'),
       ]);
       if (ownStore || isSuper === true) {
         await supabase.auth.signOut();
-        toast.error('দোকানের মালিক বা স্টাফ হলে Cloud Commerce লগইন পেজ থেকে লগইন করুন।');
-        window.location.assign('/merchant/login');
+        toast.error('এই স্টোরে আপনার কোনো অ্যাকাউন্ট নেই। অনুগ্রহ করে সাইন আপ করুন।');
         setLoading(false);
         return;
       }
