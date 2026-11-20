@@ -139,9 +139,9 @@ async function callApi(url, headers, body, label) {
   const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    if (res.status === 401 || res.status === 403) throw new Error(`${label} API Key ভুল বা অনুমতি নেই`);
+    if (res.status === 401 || res.status === 403) throw new Error(`${label} API Key ভুল বা অনুমতি নেই (${String(data?.error?.message || '').slice(0, 150)})`);
     if (res.status === 429) throw new Error(`${label} ব্যস্ত বা ব্যালান্স শেষ, একটু পরে চেষ্টা করুন`);
-    if (res.status === 404) throw new Error(`${label}-এ এই মডেল পাওয়া যায়নি, সুপার এডমিনে মডেলের নাম ঠিক করুন`);
+    if (res.status === 404) throw new Error(`${label}-এ এই মডেল পাওয়া যায়নি, সুপার এডমিনে মডেলের নাম ঠিক করুন (${String(data?.error?.message || '').slice(0, 150)})`);
     throw new Error(`${label}: ${data?.error?.message || `HTTP ${res.status}`}`);
   }
   return data;
