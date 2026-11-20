@@ -10,6 +10,11 @@ export async function onRequest(context) {
   const url = new URL(context.request.url);
   const normalizedPath = url.pathname.replace(/\/+/g, '/');
 
+  // The Cloud Commerce landing page and brand files carry their own tags; never add a store's SEO to them
+  if (normalizedPath === '/platform' || normalizedPath.startsWith('/platform/') || normalizedPath.startsWith('/brand/')) {
+    return context.next();
+  }
+
   // Direct edge function handlers to prevent any 404 or double-slash routing issues on Cloudflare Pages
   if (normalizedPath === '/api/blacklist-trap') {
     return blacklistTrapHandler(context);
