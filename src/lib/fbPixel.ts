@@ -1,3 +1,4 @@
+import { currentStoreSlug } from './currentStore';
 /**
  * Facebook (Meta) Pixel & Conversions API (CAPI) Integration Helper
  * Enhanced with First-Party Identity Resolution for high Event Match Quality (EMQ 8.5+)
@@ -157,6 +158,7 @@ export const sendServerEvent = async (
         userData: enrichedUser,
         customerId,
         url: window.location.href,
+        store: currentStoreSlug,
         fbp,
         fbc,
         ttp,

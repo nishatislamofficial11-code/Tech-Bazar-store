@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { currentStoreSlug } from '../../lib/currentStore';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { 
@@ -122,7 +123,7 @@ export default function AdminSEO() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const liveSitemapUrl = typeof window !== 'undefined' ? `${window.location.origin}/sitemap.xml` : '/sitemap.xml';
+  const liveSitemapUrl = typeof window !== 'undefined' ? `${window.location.origin}/sitemap.xml${currentStoreSlug ? `?store=${encodeURIComponent(currentStoreSlug)}` : ''}` : '/sitemap.xml';
   const liveRobotsUrl = typeof window !== 'undefined' ? `${window.location.origin}/robots.txt` : '/robots.txt';
   const totalUrlsCount = stats.products + stats.categories + stats.pages + 3;
 

@@ -88,3 +88,14 @@ export async function notifyStoreTelegram(cfg, storeId, messageHtml) {
 export function escapeHtml(text) {
   return String(text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+// For public pages that read with the anon key (feed, sitemap, SEO): pass the link's ?store=
+// to the database so it returns that store's rows (the database filters by this header).
+export function storeSlugFromUrl(url) {
+  const slug = String(url.searchParams.get('store') || '').trim().toLowerCase();
+  return SLUG.test(slug) ? slug : '';
+}
+export function storeHeaders(url) {
+  const slug = storeSlugFromUrl(url);
+  return slug ? { 'x-store': slug } : {};
+}
