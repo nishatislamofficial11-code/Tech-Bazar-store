@@ -36,6 +36,17 @@ export default function SignIn() {
       await supabase.auth.signOut();
       toast.error('এই স্টোরে আপনার কোনো অ্যাকাউন্ট নেই। অনুগ্রহ করে সাইন আপ করুন।');
     } else {
+      // Store owners and staff log in only through the Cloud Commerce login, not a shop's customer page
+      const [{ data: ownStore }, { data: isSuper }] = await Promise.all([
+        supabase.rpc('my_store'), supabase.rpc('is_super_admin'),
+      ]);
+      if (ownStore || isSuper === true) {
+        await supabase.auth.signOut();
+        toast.error('দোকানের মালিক বা স্টাফ হলে Cloud Commerce লগইন পেজ থেকে লগইন করুন।');
+        window.location.assign('/merchant/login');
+        setLoading(false);
+        return;
+      }
       toast.success('Successfully signed in!');
       navigate('/');
     }

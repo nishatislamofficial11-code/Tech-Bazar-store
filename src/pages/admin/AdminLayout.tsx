@@ -31,7 +31,7 @@ export default function AdminLayout() {
   useEffect(() => {
     if (!loading) {
       if (!profile) {
-        navigate('/signin');
+        navigate('/merchant/login');
       } else if (profile.role !== 'admin' && profile.role !== 'manager' && profile.role !== 'demo') {
         toast.error('Access denied. Administrator privileges required.');
         navigate('/');
@@ -42,7 +42,7 @@ export default function AdminLayout() {
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate('/signin');
+      navigate('/merchant/login');
     } catch (error) {
       console.error('Error signing out:', error);
     }
