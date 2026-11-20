@@ -1,6 +1,6 @@
 /**
  * Super admin only: asks the chosen AI company which models this API key can use.
- *   POST /api/ai-models { provider: 'anthropic' | 'openai' | 'google', key?: string }
+ *   POST /api/ai-models { provider: 'anthropic' | 'openai' | 'google' | 'groq' | 'openrouter', key?: string }
  * Uses the saved key when `key` is empty. Returns { ok, models: [{ id, name }] }.
  */
 import { serverConfig, rest } from './_store-lib.js';
@@ -8,7 +8,10 @@ import { serverConfig, rest } from './_store-lib.js';
 const json = (payload, status = 200) => new Response(JSON.stringify(payload), {
   status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
 });
-const KEY_NAMES = { anthropic: 'private_anthropic_api_key', openai: 'private_openai_api_key', google: 'private_google_api_key' };
+const KEY_NAMES = {
+  anthropic: 'private_anthropic_api_key', openai: 'private_openai_api_key', google: 'private_google_api_key',
+  groq: 'private_groq_api_key', openrouter: 'private_openrouter_api_key',
+};
 
 async function isSuperAdmin(cfg, authHeader) {
   if (!authHeader?.startsWith('Bearer ')) return false;
@@ -22,6 +25,10 @@ async function listModels(provider, key) {
   let res;
   if (provider === 'anthropic') {
     res = await fetch('https://api.anthropic.com/v1/models?limit=100', { headers: { 'x-api-key': key, 'anthropic-version': '2026-10-21' } });
+  } else if (provider === 'groq') {
+    res = await fetch('https://api.groq.com/openai/v1/models', { headers: { Authorization: `Bearer ${key}` } });
+  } else if (provider === 'openrouter') {
+    res = await fetch('https://openrouter.ai/api/v1/models', { headers: { Authorization: `Bearer ${key}` } });
   } else if (provider === 'openai') {
     res = await fetch('https://api.openai.com/v1/models', { headers: { Authorization: `Bearer ${key}` } });
   } else {
@@ -33,6 +40,15 @@ async function listModels(provider, key) {
     throw new Error(data?.error?.message || `HTTP ${res.status}`);
   }
   if (provider === 'anthropic') return (data?.data || []).map((m) => ({ id: m.id, name: m.display_name || m.id }));
+  if (provider === 'groq') {
+    return (data?.data || [])
+      .filter((m) => m.active !== false && !/(whisper|tts|guard|playai|orpheus)/i.test(m.id))
+      .map((m) => ({ id: m.id, name: m.id }));
+  }
+  if (provider === 'openrouter') {
+    // Only the free models (their ids end in ':free')
+    return (data?.data || []).filter((m) => /:free$/.test(m.id)).map((m) => ({ id: m.id, name: m.name || m.id }));
+  }
   if (provider === 'openai') {
     return (data?.data || [])
       .map((m) => m.id)
