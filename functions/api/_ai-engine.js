@@ -20,7 +20,7 @@ const OPENAI_STYLE = {
   // Free OpenRouter models differ in what they support, so rely on the prompt for the JSON shape
   openrouter: { url: 'https://openrouter.ai/api/v1/chat/completions', label: 'OpenRouter', format: null },
 };
-const HISTORY_LIMIT = 20;
+const HISTORY_LIMIT = 12;
 // Hand-offs caused by a technical problem (key, model, limit) start with this mark; the next
 // customer message gives the AI another try instead of leaving the chat stuck with staff.
 const TECH = '⚠️ ';
@@ -68,12 +68,41 @@ function variantText(variants) {
 }
 
 // Everything the AI should know about this shop. Kept in a stable order so it can be cached.
-async function shopContext(cfg, store, ai) {
-  const [products, knowledge, settings] = await Promise.all([
-    rest(cfg, `products?store_id=eq.${store.id}&select=title,price,original_price,stock,slug,variants,is_delivery_free&order=title.asc&limit=300`),
+// Words from what the customer wrote, to find the products they are asking about
+function searchWords(text) {
+  return Array.from(new Set(String(text || '').toLowerCase()
+    .split(/[^a-z0-9\u0980-\u09ff]+/i)
+    .filter((w) => w.length >= 3 && !/^(ache|asa|ase|achhe|kinte|chai|cai|price|dam|koto|ki|kemon|ami|amar|tomar|apnar|product|prodact|produkt|the|and|for|you|have|want)$/i.test(w))));
+}
+
+// Only the products that match the conversation (plus a few others) are sent to the AI, so big shops
+// stay within the AI's limits and cost less. The full list of categories is always included.
+const MAX_PRODUCTS = 25;
+function pickProducts(products, queryText) {
+  const words = searchWords(queryText);
+  const scored = products.map((p, i) => {
+    const title = String(p.title || '').toLowerCase();
+    let score = 0;
+    for (const w of words) if (title.includes(w)) score += w.length;
+    return { p, score, i };
+  });
+  const matched = scored.filter((x) => x.score > 0).sort((a, b) => b.score - a.score).map((x) => x.p);
+  const rest = scored.filter((x) => x.score === 0).map((x) => x.p);
+  return [...matched, ...rest].slice(0, MAX_PRODUCTS);
+}
+
+async function shopContext(cfg, store, ai, queryText = '') {
+  const [allProducts, knowledge, settings, categories] = await Promise.all([
+    rest(cfg, `products?store_id=eq.${store.id}&select=title,price,original_price,stock,variants,is_delivery_free,category_id&order=created_at.desc&limit=500`),
     rest(cfg, `ai_knowledge?store_id=eq.${store.id}&is_active=eq.true&select=category,title,content&order=category.asc,title.asc&limit=200`),
     rest(cfg, `settings?store_id=eq.${store.id}&key=in.(site_title,delivery_charge_type,flat_delivery_charge,delivery_charge_inside_dhaka,delivery_charge_outside_dhaka,whatsapp_number)&select=key,value`),
+    rest(cfg, `categories?store_id=eq.${store.id}&select=id,name&limit=100`).catch(() => []),
   ]);
+  const total = (allProducts || []).length;
+  const products = pickProducts(allProducts || [], queryText);
+  const catCount = {};
+  for (const p of allProducts || []) if (p.category_id) catCount[p.category_id] = (catCount[p.category_id] || 0) + 1;
+  const catLine = (categories || []).filter((c) => catCount[c.id]).map((c) => `${c.name} (${catCount[c.id]})`).join(', ');
   const s = Object.fromEntries((settings || []).map((r) => [r.key, r.value]));
   const shopName = s.site_title || store.slug;
 
@@ -94,7 +123,10 @@ async function shopContext(cfg, store, ai) {
     `ডেলিভারি চার্জ: ${delivery}`,
     s.whatsapp_number ? `WhatsApp: ${s.whatsapp_number}` : null,
     '',
-    `## প্রোডাক্ট তালিকা (${productLines.length}টি)`,
+    catLine ? `ক্যাটাগরি: ${catLine}` : null,
+    total > productLines.length
+      ? `## প্রোডাক্ট (মোট ${total}টির মধ্যে প্রশ্নের সাথে মেলে এমন ${productLines.length}টি। কাস্টমার যা খুঁজছে তা এখানে না থাকলে ক্যাটাগরি বা নাম জিজ্ঞেস করো, "নেই" বলবে না)`
+      : `## প্রোডাক্ট তালিকা (${productLines.length}টি)`,
     productLines.join('\n') || '(কোনো প্রোডাক্ট নেই)',
     '',
     '## দোকানের নীতি ও প্রশ্ন-উত্তর',
@@ -324,7 +356,9 @@ export async function handleCustomerMessage(cfg, store, conv, text) {
   const history = await rest(cfg, `ai_messages?conversation_id=eq.${conv.id}&select=role,content&order=created_at.desc&limit=${HISTORY_LIMIT}`);
   let out;
   try {
-    out = await askAi(cfg, platform, ai, await shopContext(cfg, store, ai), (history || []).reverse());
+    const recent = (history || []).reverse();
+    const queryText = recent.filter((m) => m.role === 'customer').slice(-3).map((m) => m.content).join(' ');
+    out = await askAi(cfg, platform, ai, await shopContext(cfg, store, ai, queryText), recent);
   } catch (err) {
     await refundReply(cfg, store.id);
     return handOff(`${TECH}AI উত্তর দিতে পারেনি (${String(err?.message || err).slice(0, 220)})`, BUSY_REPLY);
