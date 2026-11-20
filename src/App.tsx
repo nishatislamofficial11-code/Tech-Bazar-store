@@ -57,6 +57,10 @@ const CatalogFeed = lazy(() => import('./pages/CatalogFeed'));
 const SuperAdminLogin = lazy(() => import('./pages/superadmin/SuperAdminLogin'));
 const SuperAdminDashboard = lazy(() => import('./pages/superadmin/SuperAdminDashboard'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const MerchantSignup = lazy(() => import('./pages/merchant/MerchantSignup'));
+const MerchantLogin = lazy(() => import('./pages/merchant/MerchantLogin'));
+const MerchantReset = lazy(() => import('./pages/merchant/MerchantReset'));
+const AdminBilling = lazy(() => import('./pages/admin/Billing'));
 const SidebarMenu = lazy(() => import('./components/layout/SidebarMenu').then((m) => ({ default: m.SidebarMenu })));
 const SearchOverlay = lazy(() => import('./components/layout/SearchOverlay').then((m) => ({ default: m.SearchOverlay })));
 const CartDrawer = lazy(() => import('./components/layout/CartDrawer').then((m) => ({ default: m.CartDrawer })));
@@ -207,6 +211,9 @@ export default function App() {
                       <Route path="/signup" element={<SignUp />} />
                       <Route path="/super-admin/login" element={<SuperAdminLogin />} />
                       <Route path="/super-admin" element={<SuperAdminDashboard />} />
+                      <Route path="/merchant/signup" element={<MerchantSignup />} />
+                      <Route path="/merchant/login" element={<MerchantLogin />} />
+                      <Route path="/merchant/reset" element={<MerchantReset />} />
                       <Route path="/profile" element={<UserProfile />} />
 
                       <Route path="/admin" element={<AdminLayout />}>
@@ -235,6 +242,7 @@ export default function App() {
                         <Route path="landing-pages/builder/:id?" element={<AdminLandingPageBuilder />} />
                         <Route path="customize" element={<AdminCustomize />} />
                         <Route path="seo" element={<AdminSEO />} />
+                        <Route path="billing" element={<AdminBilling />} />
                       </Route>
 
                       {/* Public Feed Routes */}

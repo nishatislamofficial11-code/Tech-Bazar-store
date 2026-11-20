@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="cc-live" content="1">
+<link rel="icon" href="/brand/logo-mark.svg" type="image/svg+xml">
+<meta property="og:title" content="Cloud Commerce">
+<meta property="og:description" content="এক প্ল্যাটফর্মে আপনার পুরো অনলাইন ব্যবসা। প্রথম ৩০ দিন ফ্রি।">
+<meta property="og:image" content="/brand/facebook-cover-1640x624.png">
+<title>Cloud Commerce</title>
+<meta name="description" content="Cloud Commerce — বাংলাদেশি ব্যবসার জন্য অনলাইন দোকানের প্ল্যাটফর্ম। অর্ডার, কুরিয়ার, অনলাইন পেমেন্ট সব এক জায়গায়। প্রথম ৩০ দিন ফ্রি।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: sticky header → hero (pitch + live sample dashboard) → capability counters → feature cards with mini demos
+   → 3-step start → single plan → FAQ → closing CTA → footer. One accent (indigo), orange reserved for "free" highlights. */
+:root{
+  --brand:#3a3fd4; --brand-hover:#2f33b8; --brand-ink:#ffffff; --orange:#ff8a3d; --orange-ink:#ffffff;
+  --bg:#f6f7ff; --tint:#eceeff; --surface:#ffffff; --fg:#121628; --muted:#59607a; --line:#e1e4f3; --soft:#f1f2fb;
+  --good:#11a37f; --shadow:0 18px 50px -24px rgba(40,44,140,.35);
+  --display:'Sora','Hind Siliguri',system-ui,sans-serif;
+  --body:'Hind Siliguri','Sora',system-ui,sans-serif;
+  --radius:20px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --brand:#6a6ff5; --brand-hover:#7d82ff; --bg:#0d0f1c; --tint:#161a33; --surface:#151829; --fg:#eef0fa; --muted:#a3a9c4; --line:#262b46; --soft:#1b1f36;
+  --shadow:0 18px 50px -24px rgba(0,0,0,.7); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --brand:#6a6ff5; --brand-hover:#7d82ff; --bg:#0d0f1c; --tint:#161a33; --surface:#151829; --fg:#eef0fa; --muted:#a3a9c4; --line:#262b46; --soft:#1b1f36;
+  --shadow:0 18px 50px -24px rgba(0,0,0,.7); color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:17px;line-height:1.65;margin:0;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.in{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--body);line-height:1.2;margin:0;text-wrap:balance;font-weight:700}
+.eyebrow{font-family:var(--display);font-size:.78rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--brand)}
+.sec{padding-block:72px}
+.sec-head{display:grid;gap:10px;justify-items:center;text-align:center;margin-bottom:40px}
+.sec-head h2{font-size:clamp(1.7rem,4.2vw,2.5rem)}
+.sec-head p{color:var(--muted);max-width:60ch;margin:0}
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:10px;font-family:var(--body);font-weight:700;font-size:1.02rem;border-radius:999px;padding:13px 26px;text-decoration:none;border:0;cursor:pointer;transition:transform .2s ease, background .2s ease, box-shadow .2s ease;white-space:nowrap}
+.btn:focus-visible{outline:3px solid var(--orange);outline-offset:3px}
+.btn-primary{background:var(--brand);color:var(--brand-ink);box-shadow:0 10px 26px -12px var(--brand);position:relative;overflow:hidden}
+.btn-primary:hover{background:var(--brand-hover);transform:translateY(-2px)}
+.btn-primary::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.35) 50%,transparent 70%);transform:translateX(-120%);animation:shine 3.6s ease-in-out infinite}
+@keyframes shine{0%,55%{transform:translateX(-120%)}85%,100%{transform:translateX(120%)}}
+.btn-ghost{background:var(--surface);color:var(--fg);border:1px solid var(--line)}
+.btn-ghost:hover{border-color:var(--brand);color:var(--brand)}
+.btn svg{width:18px;height:18px}
+/* header */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--bg)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .2s}
+.top.scrolled{border-bottom-color:var(--line)}
+.top .bar-row{display:flex;align-items:center;justify-content:space-between;gap:16px;height:68px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand svg{width:38px;height:38px;flex:none}
+.wm{font-family:var(--display);font-size:1.3rem;letter-spacing:-.03em;line-height:1;white-space:nowrap}
+.wm b{font-weight:700}.wm span{font-weight:300}
+.nav{display:flex;align-items:center;gap:26px}
+.nav a{text-decoration:none;color:var(--muted);font-weight:500}
+.nav a:hover{color:var(--fg)}
+.top-cta{display:flex;gap:10px;align-items:center}
+.top-cta .btn{padding:9px 18px;font-size:.95rem}
+.menu-btn{display:none;background:none;border:1px solid var(--line);border-radius:12px;width:42px;height:42px;color:var(--fg);cursor:pointer}
+@media (max-width:860px){.nav,.top-cta .login{display:none}.menu-btn{display:inline-grid;place-items:center}}
+@media (max-width:420px){.top-cta .btn-primary{display:none}}
+.drawer{display:none;border-top:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow)}
+.drawer.open{display:block}
+.drawer .in{display:grid;padding-block:8px 18px}
+.drawer nav{display:grid}
+.drawer nav a{padding:13px 4px;text-decoration:none;font-weight:600;font-size:1.05rem;border-bottom:1px solid var(--line)}
+.drawer .drawer-cta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.drawer .drawer-cta .btn{justify-content:center}
+/* hero */
+.hero{padding-block:56px 40px;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:-30% -10% auto auto;width:720px;height:720px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--brand) 22%,transparent) 0%,transparent 65%);pointer-events:none}
+.hero .in{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center;position:relative}
+@media (max-width:900px){.hero .in{grid-template-columns:1fr;gap:36px}}
+.badge{display:inline-flex;align-items:center;gap:8px;border:1px solid color-mix(in srgb,var(--brand) 35%,var(--line));background:var(--surface);color:var(--brand);border-radius:999px;padding:6px 14px;font-weight:600;font-size:.9rem}
+.badge i{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 var(--good);animation:ping 2s infinite}
+@keyframes ping{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 60%,transparent)}100%{box-shadow:0 0 0 10px transparent}}
+.hero h1{font-size:clamp(2.1rem,5.6vw,3.6rem);margin-top:18px;letter-spacing:-.01em}
+.hero h1 em{font-style:normal;color:var(--brand);position:relative;white-space:nowrap}
+.hero h1 em::after{content:"";position:absolute;left:0;right:0;bottom:.04em;height:.18em;background:color-mix(in srgb,var(--orange) 55%,transparent);border-radius:4px;z-index:-1;transform-origin:left;animation:underline 1.1s .4s cubic-bezier(.2,.8,.2,1) both}
+@keyframes underline{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.hero p.sub{color:var(--muted);font-size:1.12rem;margin:18px 0 26px;max-width:52ch}
+.hero .ctas{display:flex;gap:12px;flex-wrap:wrap}
+.hero .fine{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:18px;color:var(--muted);font-size:.93rem}
+.hero .fine span{display:inline-flex;align-items:center;gap:6px}
+.hero .fine svg{width:16px;height:16px;color:var(--good)}
+/* sample dashboard */
+.dash{background:var(--surface);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:22px;display:grid;gap:16px;position:relative;min-width:0;animation:float 7s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.dash-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.dash-head b{font-size:1rem}
+.tag{font-size:.75rem;font-weight:600;color:var(--muted);background:var(--soft);border-radius:999px;padding:3px 10px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kpi{background:var(--soft);border-radius:14px;padding:12px;min-width:0}
+.kpi small{color:var(--muted);font-size:.8rem;display:block}
+.kpi strong{font-family:var(--display);font-size:1.35rem;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi .up{color:var(--good);font-size:.78rem;font-weight:600}
+.bars{display:flex;align-items:flex-end;gap:8px;height:120px;padding-top:8px;border-bottom:1px dashed var(--line)}
+.bars div{flex:1;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,var(--brand),color-mix(in srgb,var(--brand) 55%,transparent));height:var(--h);transform-origin:bottom;animation:grow 1s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i)*90ms + 300ms)}
+.bars div.today{background:linear-gradient(180deg,var(--orange),color-mix(in srgb,var(--orange) 55%,transparent))}
+@keyframes grow{from{transform:scaleY(.05)}to{transform:scaleY(1)}}
+.days{display:flex;gap:8px;color:var(--muted);font-size:.72rem;margin-top:-8px}
+.days span{flex:1;text-align:center}
+.feed{display:grid;gap:8px;min-height:116px}
+.order{display:flex;align-items:center;gap:10px;background:var(--soft);border-radius:12px;padding:9px 12px;font-size:.9rem;animation:slidein .5s cubic-bezier(.2,.8,.2,1) both}
+@keyframes slidein{from{transform:translateY(-10px);opacity:.2}to{transform:none;opacity:1}}
+.order .dot{width:30px;height:30px;border-radius:10px;background:color-mix(in srgb,var(--brand) 15%,transparent);display:grid;place-items:center;color:var(--brand);flex:none}
+.order .dot svg{width:16px;height:16px}
+.order .meta{min-width:0;flex:1}
+.order .meta b{display:block;font-size:.9rem}
+.order .meta span{color:var(--muted);font-size:.78rem}
+.order .amt{font-family:var(--display);font-weight:600;font-variant-numeric:tabular-nums}
+.pill-s{font-size:.7rem;font-weight:700;border-radius:999px;padding:2px 8px;margin-left:6px}
+.pill-s.cod{background:color-mix(in srgb,var(--orange) 18%,transparent);color:#c25a12}
+.pill-s.paid{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.toast{position:absolute;right:-10px;top:-16px;background:var(--fg);color:var(--bg);border-radius:14px;padding:9px 14px;font-size:.85rem;font-weight:600;box-shadow:var(--shadow);display:flex;align-items:center;gap:8px;animation:pop .45s cubic-bezier(.2,1.4,.4,1) both}
+.toast svg{width:16px;height:16px;color:var(--orange)}
+@keyframes pop{from{transform:scale(.6) translateY(6px);opacity:0}to{transform:none;opacity:1}}
+@media (max-width:520px){.toast{right:8px}}
+/* counters */
+.counters{background:var(--surface);border-block:1px solid var(--line)}
+.counters .in{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;padding-block:34px}
+@media (max-width:760px){.counters .in{grid-template-columns:repeat(2,1fr)}}
+.counter{display:grid;gap:2px;text-align:center}
+.counter strong{font-family:var(--display);font-size:clamp(2rem,5vw,2.8rem);letter-spacing:-.03em;color:var(--brand);font-variant-numeric:tabular-nums;line-height:1.1}
+.counter span{color:var(--muted);font-size:.95rem}
+/* features */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media (max-width:980px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.grid{grid-template-columns:1fr}}
+.feat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;display:grid;grid-template-rows:auto auto 1fr;gap:12px;min-width:0;transition:transform .25s ease, box-shadow .25s ease, border-color .25s}
+.feat:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:color-mix(in srgb,var(--brand) 40%,var(--line))}
+.feat.wide{grid-column:span 2}
+@media (max-width:640px){.feat.wide{grid-column:auto}}
+.feat h3{font-size:1.2rem}
+.feat p{margin:0;color:var(--muted);font-size:.98rem}
+.demo{background:var(--soft);border-radius:14px;padding:14px;min-height:150px;display:grid;align-content:center;gap:8px;min-width:0;overflow:hidden}
+/* courier demo */
+.route{display:grid;gap:10px;font-size:.88rem}
+.stop{display:flex;gap:10px;align-items:center}
+.stop i{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:var(--surface);color:var(--brand);flex:none;border:1px solid var(--line)}
+.stop i svg{width:15px;height:15px}
+.track{height:6px;border-radius:9px;background:var(--line);overflow:hidden}
+.track b{display:block;height:100%;width:30%;background:var(--brand);border-radius:9px;animation:deliver 3.2s ease-in-out infinite}
+@keyframes deliver{0%{width:8%}70%,100%{width:100%}}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:.78rem;font-weight:600;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+/* payment demo */
+.pay-opt{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:.88rem;transition:border-color .3s, box-shadow .3s}
+.pay-opt.on{border-color:var(--brand);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 30%,transparent)}
+.pay-opt b{font-family:var(--display);font-variant-numeric:tabular-nums;font-size:.85rem}
+/* fraud demo */
+.risk{display:grid;gap:8px;font-size:.88rem}
+.meter{height:10px;border-radius:9px;background:linear-gradient(90deg,var(--good),#f2b33d,#e5484d);position:relative}
+.meter i{position:absolute;top:-4px;width:18px;height:18px;border-radius:50%;background:var(--surface);border:3px solid var(--fg);left:var(--r,20%);transition:left 1.2s cubic-bezier(.2,.8,.2,1);transform:translateX(-50%)}
+/* screens demo */
+.screens{display:grid;gap:10px;justify-items:center}
+.devices{display:flex;gap:6px}
+.devices button{font:inherit;font-size:.8rem;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:4px 12px;cursor:pointer}
+.devices button[aria-pressed="true"]{border-color:var(--brand);color:var(--brand)}
+.devices button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.mock{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px;display:grid;gap:6px;transition:width .5s cubic-bezier(.2,.8,.2,1);width:var(--w,100%);max-width:100%}
+.mock .bar{height:8px;border-radius:6px;background:var(--line);width:40%}
+.mock .row{display:grid;grid-template-columns:repeat(var(--cols,4),1fr);gap:6px;transition:all .4s}
+.mock .row i{aspect-ratio:1;border-radius:8px;background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 30%,transparent),color-mix(in srgb,var(--orange) 30%,transparent))}
+/* telegram demo */
+.tg{background:var(--surface);border:1px solid var(--line);border-radius:14px 14px 14px 4px;padding:10px 12px;font-size:.85rem;max-width:92%;animation:slidein .5s both}
+.tg b{color:var(--brand)}
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;counter-reset:s}
+@media (max-width:820px){.steps{grid-template-columns:1fr}}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px;display:grid;gap:10px;position:relative}
+.step .n{font-family:var(--display);font-weight:700;font-size:.85rem;color:var(--brand-ink);background:var(--brand);border-radius:999px;padding:4px 12px;justify-self:start}
+.step h3{font-size:1.2rem}
+.step p{margin:0;color:var(--muted)}
+/* pricing */
+.price-wrap{display:grid;max-width:520px;margin:0 auto}
+.plan{background:var(--brand);color:#fff;border-radius:26px;padding:30px;display:grid;gap:16px;position:relative;overflow:hidden}
+.plan::before{content:"";position:absolute;right:-90px;top:-90px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.08)}
+.plan .free{justify-self:start;background:var(--orange);color:var(--orange-ink);font-weight:700;border-radius:999px;padding:5px 14px;font-size:.92rem}
+.plan h3{font-size:1.5rem}
+.plan .amount{font-family:var(--display);font-size:2.6rem;letter-spacing:-.03em;line-height:1;font-weight:700}
+.plan .amount small{font-family:var(--body);font-size:1rem;font-weight:500;opacity:.8;letter-spacing:0}
+.plan .btn{background:#fff;color:#2b2fae;justify-self:start}
+.plan ul{list-style:none;padding:0;margin:0;display:grid;gap:9px}
+.plan li{display:flex;gap:10px;align-items:flex-start}
+.plan li svg{width:20px;height:20px;flex:none;margin-top:3px}
+.after{background:var(--surface);border:1px solid var(--line);border-radius:26px;padding:30px;display:grid;gap:14px;align-content:start}
+.after h3{font-size:1.25rem}
+.after ol{margin:0;padding-left:1.2em;display:grid;gap:10px;color:var(--muted)}
+.after ol b{color:var(--fg)}
+/* faq */
+.faq{max-width:820px;margin:0 auto;display:grid;gap:12px}
+.faq details{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:4px 20px}
+.faq summary{cursor:pointer;list-style:none;padding:14px 0;font-weight:700;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:var(--display);font-size:1.4rem;color:var(--brand);transition:transform .25s;flex:none}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq summary:focus-visible{outline:2px solid var(--brand);outline-offset:4px;border-radius:6px}
+.faq p{margin:0 0 16px;color:var(--muted)}
+/* closing */
+.closing{background:linear-gradient(125deg,#1b1e6b,var(--brand));color:#fff;border-radius:28px;padding:48px 28px;text-align:center;display:grid;gap:16px;justify-items:center;position:relative;overflow:hidden}
+.closing h2{font-size:clamp(1.7rem,4.5vw,2.6rem)}
+.closing p{margin:0;opacity:.88;max-width:52ch}
+.closing .btn-primary{background:var(--orange);box-shadow:0 10px 26px -10px var(--orange)}
+.closing svg.bg{position:absolute;width:420px;height:420px;right:-90px;bottom:-140px;opacity:.1}
+/* footer */
+footer{padding-block:48px 40px;color:var(--muted);font-size:.95rem}
+footer .in{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:28px}
+@media (max-width:760px){footer .in{grid-template-columns:1fr}}
+footer h4{color:var(--fg);margin:0 0 10px;font-size:1rem}
+footer ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+footer a{text-decoration:none}
+footer a:hover{color:var(--brand)}
+.copy{border-top:1px solid var(--line);margin-top:28px;padding-top:18px;font-size:.88rem}
+.contact li{display:grid;gap:0}
+.contact li span{font-size:.8rem;text-transform:none;color:var(--muted)}
+.contact li a,.contact li b{color:var(--fg);font-weight:600;word-break:break-word}
+.social{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.social a{display:inline-flex;align-items:center;justify-content:center;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);font-weight:600;font-size:.85rem;color:var(--fg)}
+.social a:hover{border-color:var(--brand);color:var(--brand)}
+.wa{position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40;width:52px;height:52px;border-radius:50%;background:#25d366;display:grid;place-items:center;box-shadow:0 10px 24px -8px rgba(0,0,0,.35)}
+.wa svg{width:28px;height:28px;color:#fff}
+/* floating CTA (phones) */
+.float-cta{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40;transform:translateY(140%);transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.float-cta.show{transform:none}
+/* reveal: content is visible by default; only blocks below the fold at load are hidden and revealed */
+.reveal.pre{opacity:0;transform:translateY(26px)}
+.reveal{transition:opacity .7s ease, transform .7s cubic-bezier(.2,.8,.2,1)}
+/* preview notice */
+.notice{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.9rem;z-index:70;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .reveal.pre{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="cc" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#3a3fd4"/><g transform="translate(32 32) scale(1.15) translate(-32 -32)"><path d="M32.1 24.9A10 10 0 1 0 32.1 39.1" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/><path d="M47.1 24.9A10 10 0 1 0 47.1 39.1" fill="none" stroke="#ff8a3d" stroke-width="5.5" stroke-linecap="round"/></g></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-store" viewBox="0 0 24 24"><path d="M4 10l1.5-5h13L20 10M5 10v9h14v-9M4 10h16M10 19v-5h4v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="10" r="2.3" fill="currentColor"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16zM10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<header class="top" id="top">
+  <div class="in bar-row">
+    <a class="brand" href="#hero" aria-label="Cloud Commerce হোম"><svg aria-hidden="true"><use href="#cc"/></svg><span class="wm"><b>cloud</b><span>commerce</span></span></a>
+    <nav class="nav" aria-label="মূল মেনু">
+      <a href="#features">ফিচার</a><a href="#how">কীভাবে শুরু</a><a href="#pricing">দাম</a><a href="#faq">প্রশ্নোত্তর</a>
+    </nav>
+    <div class="top-cta">
+      <a class="btn btn-ghost login" data-link="login" href="/merchant/login">লগইন</a>
+      <a class="btn btn-primary" data-link="signup" href="/merchant/signup">ফ্রি শুরু করুন</a>
+      <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="drawer" aria-label="মেনু খুলুন"><svg width="22" height="22"><use href="#i-menu"/></svg></button>
+    </div>
+  </div>
+  <div class="drawer" id="drawer">
+    <div class="in">
+      <nav aria-label="মোবাইল মেনু"><a href="#features">ফিচার</a><a href="#how">কীভাবে শুরু</a><a href="#pricing">দাম</a><a href="#faq">প্রশ্নোত্তর</a></nav>
+      <div class="drawer-cta">
+        <a class="btn btn-ghost" data-link="login" href="/merchant/login">লগইন</a>
+        <a class="btn btn-primary" data-link="signup" href="/merchant/signup">ফ্রি শুরু করুন</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero" id="hero">
+    <div class="in">
+      <div>
+        <span class="badge"><i></i><span data-cms="landing_badge">বাংলাদেশি ব্যবসার জন্য বানানো</span></span>
+        <h1><span data-cms="landing_hero_title">এক প্ল্যাটফর্মে আপনার</span> <em data-cms="landing_hero_highlight">পুরো অনলাইন ব্যবসা</em></h1>
+        <p class="sub" data-cms="landing_hero_subtitle">দোকানের ওয়েবসাইট, অর্ডার, কুরিয়ার, অনলাইন পেমেন্ট আর ফেসবুক পিক্সেল, সব এক জায়গা থেকে চালান। কোডিং জানার দরকার নেই।</p>
+        <div class="ctas">
+          <a class="btn btn-primary" data-link="signup" href="/merchant/signup"><span class="trial-days">৩০</span> দিন ফ্রি শুরু করুন <svg><use href="#i-arrow"/></svg></a>
+          <a class="btn btn-ghost" data-link="demo" href="/?store=techbazar">ডেমো দোকান দেখুন</a>
+        </div>
+        <div class="fine">
+          <span><svg><use href="#i-check"/></svg>কোনো কার্ড লাগবে না</span>
+          <span><svg><use href="#i-check"/></svg>৫ মিনিটে দোকান চালু</span>
+          <span><svg><use href="#i-check"/></svg>বাংলায় সব কিছু</span>
+        </div>
+      </div>
+
+      <div class="dash" aria-label="নমুনা ড্যাশবোর্ড">
+        <div class="toast" id="toast" hidden><svg><use href="#i-bell"/></svg><span id="toastText">নতুন অর্ডার এসেছে!</span></div>
+        <div class="dash-head"><b>আপনার দোকানের ড্যাশবোর্ড</b><span class="tag">নমুনা</span></div>
+        <div class="kpis">
+          <div class="kpi"><small>আজকের অর্ডার</small><strong data-count="48">48</strong> <span class="up">▲ ১২%</span></div>
+          <div class="kpi"><small>আজকের বিক্রি</small><strong>৳<span data-count="62450" data-fmt="bn">62450</span></strong></div>
+          <div class="kpi"><small>ডেলিভারি হয়েছে</small><strong data-count="39">39</strong></div>
+        </div>
+        <div>
+          <div class="bars" aria-hidden="true">
+            <div style="--h:46%;--i:0"></div><div style="--h:58%;--i:1"></div><div style="--h:52%;--i:2"></div><div style="--h:70%;--i:3"></div><div style="--h:64%;--i:4"></div><div style="--h:82%;--i:5"></div><div class="today" style="--h:94%;--i:6"></div>
+          </div>
+          <div class="days" aria-hidden="true"><span>শনি</span><span>রবি</span><span>সোম</span><span>মঙ্গল</span><span>বুধ</span><span>বৃহঃ</span><span>শুক্র</span></div>
+        </div>
+        <div class="feed" id="feed" aria-live="off"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="counters" aria-label="প্ল্যাটফর্মে যা পাবেন">
+    <div class="in">
+      <div class="counter"><strong><span data-count="30" id="trialCount">30</span> দিন</strong><span>সম্পূর্ণ ফ্রি ট্রায়াল</span></div>
+      <div class="counter"><strong data-count="3">3</strong><span>অনলাইন পেমেন্ট গেটওয়ে</span></div>
+      <div class="counter"><strong data-count="2">2</strong><span>কুরিয়ারের সাথে সরাসরি সংযোগ</span></div>
+      <div class="counter"><strong data-count="4">4</strong><span>পেমেন্টের ধরন (COD থেকে ফুল পেমেন্ট)</span></div>
+    </div>
+  </section>
+
+  <section class="sec" id="features">
+    <div class="in">
+      <div class="sec-head reveal">
+        <span class="eyebrow">Features</span>
+        <h2>ব্যবসা চালানোর সব টুল এক জায়গায়</h2>
+        <p>আলাদা আলাদা অ্যাপ আর শিটের ঝামেলা নেই। অর্ডার আসা থেকে ক্রেতার হাতে পৌঁছানো পর্যন্ত সব এখান থেকেই।</p>
+      </div>
+      <div class="grid">
+        <article class="feat wide reveal">
+          <div class="demo"><div class="route">
+            <div class="stop"><i><svg><use href="#i-store"/></svg></i><div><b>পিকআপ</b> · আপনার দোকান, মিরপুর</div></div>
+            <div class="track"><b></b></div>
+            <div class="stop"><i><svg><use href="#i-pin"/></svg></i><div><b>ডেলিভারি</b> · ক্রেতার ঠিকানা, চট্টগ্রাম</div></div>
+            <div class="chips"><span class="chip">Steadfast</span><span class="chip">Pathao</span><span class="chip">এক ক্লিকে বুকিং</span><span class="chip">লাইভ স্ট্যাটাস</span></div>
+          </div></div>
+          <h3>এক ক্লিকে কুরিয়ার বুকিং</h3>
+          <p>অর্ডার থেকেই সরাসরি Steadfast বা Pathao-তে পাঠান। ট্র্যাকিং কোড আর ডেলিভারির অবস্থা নিজে থেকেই আপডেট হয়।</p>
+        </article>
+        <article class="feat reveal">
+          <div class="demo" id="payDemo">
+            <div class="pay-opt" data-p="0"><span>ক্যাশ অন ডেলিভারি</span><b>৳০ এখন</b></div>
+            <div class="pay-opt" data-p="1"><span>শুধু ডেলিভারি চার্জ অগ্রিম</span><b>৳১২০ এখন</b></div>
+            <div class="pay-opt" data-p="2"><span>ফুল পেমেন্ট</span><b>৳১,৪৫০ এখন</b></div>
+          </div>
+          <h3>অগ্রিম আর অনলাইন পেমেন্ট</h3>
+          <p>bKash, Nagad, কার্ড। SSLCommerz, aamarPay বা EPS দিয়ে টাকা সরাসরি আপনার একাউন্টে।</p>
+        </article>
+        <article class="feat reveal">
+          <div class="demo"><div class="risk">
+            <div style="display:flex;justify-content:space-between"><b>০১৭XX-XXXX৬৭</b><span id="riskLabel">যাচাই হচ্ছে…</span></div>
+            <div class="meter" id="meter"><i></i></div>
+            <div class="chips"><span class="chip">কুরিয়ার হিস্টরি</span><span class="chip">ব্ল্যাকলিস্ট</span><span class="chip">IP ব্লক</span></div>
+          </div></div>
+          <h3>ভুয়া অর্ডার আটকান</h3>
+          <p>অর্ডার নেওয়ার আগেই দেখুন ক্রেতা আগে কতবার পার্সেল ফেরত দিয়েছে। সন্দেহজনক নম্বর এক ক্লিকে ব্লক।</p>
+        </article>
+        <article class="feat reveal">
+          <div class="demo screens">
+            <div class="devices" role="group" aria-label="স্ক্রিন বাছুন">
+              <button type="button" data-d="desk" aria-pressed="true">ডেস্কটপ</button>
+              <button type="button" data-d="tab" aria-pressed="false">ট্যাব</button>
+              <button type="button" data-d="mob" aria-pressed="false">মোবাইল</button>
+            </div>
+            <div class="mock" id="mock"><div class="bar"></div><div class="row"><i></i><i></i><i></i><i></i></div><div class="row"><i></i><i></i><i></i><i></i></div></div>
+          </div>
+          <h3>সব স্ক্রিনে সুন্দর দোকান</h3>
+          <p>আপনার দোকান মোবাইল, ট্যাব আর কম্পিউটারে নিজে থেকেই মানিয়ে যায়। থিমের রঙ আর ফন্ট নিজের মতো বদলান।</p>
+        </article>
+        <article class="feat reveal">
+          <div class="demo" id="tgDemo">
+            <div class="tg">🛒 <b>নতুন অর্ডার!</b><br>রাফি আহমেদ · ঢাকা · ৳১,২৫০</div>
+          </div>
+          <h3>টেলিগ্রামে অর্ডারের খবর</h3>
+          <p>নতুন অর্ডার এলেই সাথে সাথে ফোনে খবর। একাধিক বট যোগ করে পুরো টিমকে জানান।</p>
+        </article>
+        <article class="feat reveal">
+          <div class="demo"><div class="chips" style="justify-content:center">
+            <span class="chip">Facebook Pixel</span><span class="chip">Conversions API</span><span class="chip">TikTok Pixel</span><span class="chip">ক্যাটালগ ফিড</span><span class="chip">UTM ট্র্যাকিং</span>
+          </div></div>
+          <h3>বিজ্ঞাপন থেকে বেশি বিক্রি</h3>
+          <p>ফেসবুক আর টিকটক পিক্সেল সার্ভার থেকেও ইভেন্ট পাঠায়, তাই বিজ্ঞাপনের হিসাব নির্ভুল থাকে। ক্যাটালগ ফিড নিজে থেকে তৈরি হয়।</p>
+        </article>
+        <article class="feat reveal">
+          <div class="demo"><div class="chips" style="justify-content:center">
+            <span class="chip">ল্যান্ডিং পেজ বিল্ডার</span><span class="chip">রেডি টেমপ্লেট</span><span class="chip">SEO</span><span class="chip">রিভিউ</span><span class="chip">ব্যানার</span>
+          </div></div>
+          <h3>একটা পণ্যের জন্য আলাদা পেজ</h3>
+          <p>বিজ্ঞাপনের জন্য বিক্রি-বান্ধব ল্যান্ডিং পেজ বানান কয়েক মিনিটে, রেডি টেমপ্লেট থেকে।</p>
+        </article>
+        <article class="feat reveal">
+          <div class="demo"><div class="chips" style="justify-content:center">
+            <span class="chip">অসম্পূর্ণ অর্ডার</span><span class="chip">ভিজিটর অ্যানালিটিক্স</span><span class="chip">স্টক হিসাব</span><span class="chip">ইনভয়েস প্রিন্ট</span>
+          </div></div>
+          <h3>কোনো অর্ডার হারাবে না</h3>
+          <p>যে ক্রেতা ফর্ম পূরণ করে চলে গেছে, তার তথ্যও থাকে। ফোন করে অর্ডারটা নিশ্চিত করুন।</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="how" style="background:var(--tint)">
+    <div class="in">
+      <div class="sec-head reveal">
+        <span class="eyebrow">How it works</span>
+        <h2>তিন ধাপে দোকান চালু</h2>
+        <p>ডিজাইন বা প্রোগ্রামিং শেখার দরকার নেই। আমরা সব সহজ করে রেখেছি।</p>
+      </div>
+      <div class="steps">
+        <div class="step reveal"><span class="n">ধাপ ১</span><h3>একাউন্ট খুলুন</h3><p>নাম, ফোন, ইমেইল আর দোকানের নাম দিন। ইমেইল যাচাই করলেই <span class="trial-days">৩০</span> দিনের ফ্রি ট্রায়াল শুরু।</p></div>
+        <div class="step reveal"><span class="n">ধাপ ২</span><h3>দোকান সাজান</h3><p>লোগো, রঙ, ডেলিভারি চার্জ ঠিক করুন আর পণ্য যোগ করুন ছবি ও দামসহ।</p></div>
+        <div class="step reveal"><span class="n">ধাপ ৩</span><h3>বিক্রি শুরু করুন</h3><p>দোকানের লিংক ফেসবুকে শেয়ার করুন। অর্ডার এলেই টেলিগ্রামে খবর পাবেন।</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="pricing">
+    <div class="in">
+      <div class="sec-head reveal">
+        <span class="eyebrow">Pricing</span>
+        <h2>সহজ দাম, কোনো লুকানো খরচ নেই</h2>
+        <p>একটাই প্ল্যান, সব ফিচারসহ। প্রথম <span class="trial-days">৩০</span> দিন পুরোপুরি ফ্রি।</p>
+      </div>
+      <div class="price-wrap">
+        <div class="plan reveal">
+          <span class="free">প্রথম <span class="trial-days">৩০</span> দিন ফ্রি</span>
+          <h3>Cloud Commerce প্ল্যান</h3>
+          <div class="amount" id="priceAmount">৳ — <small>/ মাস</small></div>
+          <ul>
+            <li><svg><use href="#i-check"/></svg>সীমাহীন পণ্য আর অর্ডার</li>
+            <li><svg><use href="#i-check"/></svg>Steadfast ও Pathao কুরিয়ার সংযোগ</li>
+            <li><svg><use href="#i-check"/></svg>অনলাইন ও অগ্রিম পেমেন্ট</li>
+            <li><svg><use href="#i-check"/></svg>ফ্রড চেক, ব্ল্যাকলিস্ট আর IP ব্লক</li>
+            <li><svg><use href="#i-check"/></svg>ল্যান্ডিং পেজ বিল্ডার আর SEO</li>
+            <li><svg><use href="#i-check"/></svg>ফেসবুক ও টিকটক পিক্সেল</li>
+          </ul>
+          <a class="btn" data-link="signup" href="/merchant/signup">ফ্রি শুরু করুন <svg><use href="#i-arrow"/></svg></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="faq" style="padding-top:0">
+    <div class="in">
+      <div class="sec-head reveal"><span class="eyebrow">FAQ</span><h2>যা জানতে চান</h2></div>
+      <div class="faq" id="faqList">
+        <details class="reveal"><summary>ফ্রি ট্রায়ালের জন্য কি কার্ড বা টাকা লাগবে?</summary><p>না। শুধু একাউন্ট খুলুন, <span class="trial-days">৩০</span> দিন সব ফিচার ফ্রি ব্যবহার করুন।</p></details>
+        <details class="reveal"><summary>আমার কি নিজের ওয়েবসাইট বা হোস্টিং লাগবে?</summary><p>না। দোকান আমাদের সার্ভারেই চলে। আপনি শুধু পণ্য যোগ করবেন আর বিক্রি করবেন।</p></details>
+        <details class="reveal"><summary>অনলাইন পেমেন্টের টাকা কার কাছে যায়?</summary><p>সরাসরি আপনার নিজের SSLCommerz, aamarPay বা EPS মার্চেন্ট একাউন্টে। আমরা মাঝখানে টাকা ধরি না।</p></details>
+        <details class="reveal"><summary>কোন কোন কুরিয়ার যুক্ত আছে?</summary><p>এখন Steadfast আর Pathao। অর্ডার থেকেই এক ক্লিকে পার্সেল বুক করা যায়।</p></details>
+        <details class="reveal"><summary>আমার ডেটা কি নিরাপদ?</summary><p>প্রতিটা দোকানের ডেটা আলাদা রাখা হয়। এক দোকানের মালিক অন্য দোকানের কিছু দেখতে পারেন না, আর পেমেন্টের হিসাব শুধু সার্ভার যাচাই করে বদলায়।</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" style="padding-top:0">
+    <div class="in">
+      <div class="closing reveal">
+        <svg class="bg" viewBox="0 0 64 64" aria-hidden="true"><path d="M32.1 24.9A10 10 0 1 0 32.1 39.1" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M47.1 24.9A10 10 0 1 0 47.1 39.1" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>
+        <h2>আজই আপনার অনলাইন দোকান খুলুন</h2>
+        <p>৫ মিনিটে সেটআপ, <span class="trial-days">৩০</span> দিন ফ্রি। কোনো কার্ড লাগবে না।</p>
+        <a class="btn btn-primary" data-link="signup" href="/merchant/signup">ফ্রি শুরু করুন <svg><use href="#i-arrow"/></svg></a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="in">
+    <div>
+      <a class="brand" href="#hero"><svg aria-hidden="true" style="width:34px;height:34px"><use href="#cc"/></svg><span class="wm" style="color:var(--fg)"><b>cloud</b><span>commerce</span></span></a>
+      <p style="margin:12px 0 0;max-width:40ch" data-cms="footer_about">বাংলাদেশি ব্যবসার জন্য অনলাইন দোকানের প্ল্যাটফর্ম।</p>
+    </div>
+    <div><h4>প্ল্যাটফর্ম</h4><ul><li><a href="#features">ফিচার</a></li><li><a href="#pricing">দাম</a></li><li><a href="#faq">প্রশ্নোত্তর</a></li><li><a data-link="login" href="/merchant/login">লগইন</a></li></ul></div>
+    <div><h4>যোগাযোগ</h4><ul class="contact" id="contactList">
+        <li data-c="contact_phone" hidden><span>ফোন</span><a></a></li>
+        <li data-c="contact_whatsapp" hidden><span>WhatsApp</span><a target="_blank" rel="noopener"></a></li>
+        <li data-c="contact_email" hidden><span>ইমেইল</span><a></a></li>
+        <li data-c="contact_address" hidden><span>ঠিকানা</span><b></b></li>
+        <li data-c="office_hours" hidden><span>অফিস সময়</span><b></b></li>
+        <li id="contactSoon">শীঘ্রই যুক্ত হবে</li>
+      </ul>
+      <div class="social" id="socialRow" hidden></div></div>
+  </div>
+  <div class="in"><div class="copy">© <span id="year">2026</span> Cloud Commerce</div></div>
+</footer>
+
+<a class="wa" id="waFloat" href="#" target="_blank" rel="noopener" aria-label="WhatsApp-এ মেসেজ দিন" hidden><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.6.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.6-.3z"/></svg></a>
+<a class="btn btn-primary float-cta" id="floatCta" data-link="signup" href="/merchant/signup">ফ্রি শুরু করুন <svg><use href="#i-arrow"/></svg></a>
+
+<script>
+/* ---- Live content: everything below is editable from the super admin panel ---- */
+const SUPA = { url: 'https://tvfhsgokbwekpfyrmhbl.supabase.co', key: 'sb_publishable_F2Vql83Ewz488LnbxNFkQQ_61zuR9PS' };
+const bnDigits = s => String(s).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+const bnMoney = n => bnDigits(Number(n).toLocaleString('en-IN'));
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const esc = v => String(v).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function applyCms(c){
+  document.querySelectorAll('[data-cms]').forEach(el => { const v = (c[el.dataset.cms] || '').trim(); if (v) el.textContent = v; });
+  const days = parseInt(c.trial_days, 10);
+  if (days > 0) {
+    document.querySelectorAll('.trial-days').forEach(el => el.textContent = bnDigits(days));
+    const tc = document.getElementById('trialCount'); if (tc) { tc.dataset.count = String(days); tc.textContent = bnDigits(days); }
+  }
+  if ((c.plan_price || '').trim()) document.getElementById('priceAmount').innerHTML = `৳${bnMoney(c.plan_price)} <small>/ মাস</small>`;
+  if ((c.plan_name || '').trim()) document.querySelectorAll('.plan h3').forEach(h => h.textContent = c.plan_name.trim() + ' প্ল্যান');
+  // contact details
+  let any = false;
+  document.querySelectorAll('#contactList [data-c]').forEach(li => {
+    const v = (c[li.dataset.c] || '').trim(); li.hidden = !v; if (!v) return; any = true;
+    const a = li.querySelector('a'), b = li.querySelector('b');
+    if (li.dataset.c === 'contact_phone') { a.textContent = bnDigits(v); a.href = 'tel:' + v.replace(/[^\d+]/g, ''); }
+    else if (li.dataset.c === 'contact_whatsapp') { const n = v.replace(/\D/g, ''); a.textContent = bnDigits(v); a.href = 'https://wa.me/' + (n.startsWith('0') ? '88' + n : n); }
+    else if (li.dataset.c === 'contact_email') { a.textContent = v; a.href = 'mailto:' + v; }
+    else b.textContent = v;
+  });
+  document.getElementById('contactSoon').hidden = any;
+  const wa = (c.contact_whatsapp || '').replace(/\D/g, '');
+  if (wa) { const f = document.getElementById('waFloat'); f.href = 'https://wa.me/' + (wa.startsWith('0') ? '88' + wa : wa); f.hidden = false; }
+  // social links
+  const socials = [['social_facebook','Facebook'],['social_youtube','YouTube'],['social_instagram','Instagram'],['social_tiktok','TikTok']]
+    .filter(([k]) => /^https?:\/\//i.test((c[k] || '').trim()));
+  const row = document.getElementById('socialRow');
+  if (socials.length) { row.innerHTML = socials.map(([k, n]) => `<a href="${esc(c[k].trim())}" target="_blank" rel="noopener">${n}</a>`).join(''); row.hidden = false; }
+  // demo store link
+  const demo = (c.demo_store_slug || '').trim().toLowerCase();
+  if (/^[a-z0-9-]{2,40}$/.test(demo)) document.querySelectorAll('[data-link="demo"]').forEach(a => a.href = '/?store=' + demo);
+  // FAQ
+  try {
+    const faq = JSON.parse(c.landing_faq || '[]');
+    if (Array.isArray(faq) && faq.length) document.getElementById('faqList').innerHTML = faq
+      .filter(f => f && f.q && f.a).map(f => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('');
+  } catch {}
+}
+fetch(`${SUPA.url}/rest/v1/platform_settings?select=key,value`, { headers: { apikey: SUPA.key } })
+  .then(r => r.ok ? r.json() : [])
+  .then(rows => applyCms(Object.fromEntries((rows || []).map(r => [r.key, r.value]))))
+  .catch(() => {});
+
+document.getElementById('year').textContent = bnDigits(new Date().getFullYear());
+
+/* Show numbers in Bangla digits at rest; count up when they come into view */
+const counters = [...document.querySelectorAll('[data-count]')];
+counters.forEach(el => { const v = +el.dataset.count; el.textContent = el.dataset.fmt ? bnMoney(v) : bnDigits(v); });
+function countUp(el){
+  const to = +el.dataset.count, money = !!el.dataset.fmt, t0 = performance.now(), dur = 1300;
+  const step = t => { const p = Math.min(1,(t-t0)/dur), e = 1-Math.pow(1-p,3), v = Math.round(to*e);
+    el.textContent = money ? bnMoney(v) : bnDigits(v); if (p<1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+
+/* Reveal on scroll: only elements below the first screen start hidden */
+const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  e.target.classList.remove('pre');
+  if (e.target.matches('[data-count]')) countUp(e.target);
+  io.unobserve(e.target);
+}), { threshold: .18 }) : null;
+if (io && !reduce) {
+  document.querySelectorAll('.reveal').forEach(el => { if (el.getBoundingClientRect().top > innerHeight) el.classList.add('pre'); io.observe(el); });
+  counters.forEach(el => io.observe(el));
+}
+
+/* Header border + floating CTA after the hero */
+const topBar = document.getElementById('top'), floatCta = document.getElementById('floatCta'), hero = document.getElementById('hero');
+addEventListener('scroll', () => {
+  topBar.classList.toggle('scrolled', scrollY > 8);
+  floatCta.classList.toggle('show', scrollY > hero.offsetHeight * .8);
+}, { passive: true });
+
+/* Mobile menu */
+const menuBtn = document.getElementById('menuBtn'), drawer = document.getElementById('drawer');
+menuBtn.addEventListener('click', () => { const o = drawer.classList.toggle('open'); menuBtn.setAttribute('aria-expanded', String(o)); });
+drawer.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { drawer.classList.remove('open'); menuBtn.setAttribute('aria-expanded','false'); }));
+
+/* Sample dashboard: a new example order every few seconds */
+const sample = [
+  ['রাফি আহমেদ','ঢাকা',1250,'cod'],['নুসরাত জাহান','সিলেট',2380,'paid'],['তানভীর হোসেন','খুলনা',890,'cod'],
+  ['সাদিয়া ইসলাম','রাজশাহী',1640,'paid'],['মেহেদী হাসান','চট্টগ্রাম',3120,'cod'],['ফারহানা আক্তার','বরিশাল',760,'paid']
+];
+const feed = document.getElementById('feed'), toast = document.getElementById('toast'), toastText = document.getElementById('toastText');
+let k = 0;
+function addOrder(animate){
+  const [n,c,a,p] = sample[k++ % sample.length];
+  const row = document.createElement('div'); row.className = 'order'; if (!animate) row.style.animation = 'none';
+  row.innerHTML = `<span class="dot"><svg><use href="#i-bag"/></svg></span><span class="meta"><b>${n}</b><span>${c}</span></span><span class="amt">৳${bnMoney(a)}</span><span class="pill-s ${p}">${p==='cod'?'COD':'পেইড'}</span>`;
+  feed.prepend(row); while (feed.children.length > 3) feed.lastChild.remove();
+  if (animate){ toastText.textContent = `নতুন অর্ডার! ৳${bnMoney(a)}`; toast.hidden = false; toast.style.animation='none'; void toast.offsetWidth; toast.style.animation=''; clearTimeout(addOrder.t); addOrder.t = setTimeout(()=>toast.hidden = true, 2200); }
+}
+addOrder(false); addOrder(false); addOrder(false);
+if (!reduce) setInterval(() => { if (!document.hidden) addOrder(true); }, 3800);
+
+/* Payment demo: cycle the highlighted option */
+const opts = [...document.querySelectorAll('#payDemo .pay-opt')]; let po = 0;
+const setPay = () => opts.forEach((o,i) => o.classList.toggle('on', i === po % opts.length));
+setPay(); if (!reduce) setInterval(() => { po++; setPay(); }, 2200);
+
+/* Fraud demo: move the meter between results */
+const meter = document.getElementById('meter'), riskLabel = document.getElementById('riskLabel');
+const risks = [['18%','✅ ভালো ক্রেতা · ৯৪% ডেলিভারি'],['82%','⚠️ ঝুঁকি বেশি · ৪ বার ফেরত']]; let ri = 0;
+const setRisk = () => { const [r,l] = risks[ri++ % risks.length]; meter.style.setProperty('--r', r); riskLabel.textContent = l; };
+setRisk(); if (!reduce) setInterval(setRisk, 3000);
+
+/* Screens demo: device buttons resize the sample store; auto-cycles until touched */
+const mock = document.getElementById('mock'), devBtns = [...document.querySelectorAll('.devices button')];
+const dev = { desk:['100%',4], tab:['72%',3], mob:['44%',2] };
+let auto = !reduce, di = 0;
+function setDev(d){ const [w,c] = dev[d]; mock.style.setProperty('--w', w); mock.querySelectorAll('.row').forEach(r => r.style.setProperty('--cols', c));
+  devBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.d === d))); }
+devBtns.forEach(b => b.addEventListener('click', () => { auto = false; setDev(b.dataset.d); }));
+setInterval(() => { if (auto) setDev(Object.keys(dev)[++di % 3]); }, 2600);
+
+/* Telegram demo */
+const tgDemo = document.getElementById('tgDemo');
+if (!reduce) setInterval(() => {
+  const [n,c,a] = sample[(k + 2) % sample.length];
+  tgDemo.innerHTML = `<div class="tg">🛒 <b>নতুন অর্ডার!</b><br>${n} · ${c} · ৳${bnMoney(a)}</div>`;
+}, 4200);
+
+/* In the design preview the app pages don't exist yet, so explain instead of navigating */
+const isPreview = !/^\/platform/.test(location.pathname) && !document.querySelector('meta[name="cc-live"]');
+if (isPreview) document.querySelectorAll('[data-link]').forEach(a => a.addEventListener('click', e => {
+  e.preventDefault();
+  const n = document.createElement('div'); n.className = 'notice'; n.setAttribute('role','status');
+  n.textContent = 'এটা নমুনা পেজ। আসল সাইটে এই বাটন সাইন আপ / লগইন পেজে নিয়ে যাবে।';
+  document.body.appendChild(n); setTimeout(() => n.remove(), 2600);
+}));
+</script>
+</body>
+</html>

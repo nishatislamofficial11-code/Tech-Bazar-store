@@ -6,6 +6,7 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { Menu, ExternalLink } from 'lucide-react';
 import { AdminSidebar } from './AdminSidebar';
 import toast from 'react-hot-toast';
+import SubscriptionBanner, { useMyStore } from '../../components/admin/SubscriptionBanner';
 
 function storefrontLink(search: string, storedSlug: string | null): string {
   const slug = new URLSearchParams(search).get('store') || storedSlug;
@@ -18,6 +19,7 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const myStore = useMyStore();
   const websiteLink = storefrontLink(location.search, localStorage.getItem('current_store_slug'));
   const [isCollapsed, setIsCollapsed] = useState(() => {
     return localStorage.getItem('admin_sidebar_collapsed') === 'true';
@@ -126,6 +128,8 @@ export default function AdminLayout() {
             Visit Website
           </a>
         </header>
+
+        <SubscriptionBanner store={myStore} />
 
         {/* Main Scrollable Content */}
         <main

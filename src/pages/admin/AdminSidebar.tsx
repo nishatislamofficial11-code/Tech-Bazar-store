@@ -6,7 +6,7 @@ import {
   FileText, Zap, Truck, Target, ShieldCheck, 
   Sliders, Paintbrush, SearchCheck, LogOut, 
   Search, X, PanelLeftClose, PanelLeft, 
-  Globe, Receipt, Box, LifeBuoy, Settings,
+  Globe, Receipt, Box, LifeBuoy, Settings, CreditCard,
   ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -81,6 +81,7 @@ export const NAV_ITEMS: NavItemDef[] = [
 ];
 
 export const BOTTOM_NAV_ITEMS: NavItemDef[] = [
+  { name: 'Billing', path: '/admin/billing', icon: CreditCard, adminOnly: true },
   { name: 'Settings', path: '/admin/settings', icon: Settings, adminOnly: true },
 ];
 

@@ -17,12 +17,13 @@ export function StoreGate({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  if (pathname.startsWith('/super-admin') || state === 'ok') return <>{children}</>;
+  const ownerArea = ['/super-admin', '/admin', '/merchant', '/signin'].some((p) => pathname.startsWith(p));
+  if (ownerArea || state === 'ok') return <>{children}</>;
   return (
     <div className="min-h-screen flex items-center justify-center p-6 text-center">
       <div>
         <h1 className="text-2xl font-bold mb-2">
-          {state === 'closed' ? 'এই স্টোরটি এখন বন্ধ আছে' : 'স্টোর পাওয়া যায়নি'}
+          {state === 'closed' ? 'দোকানটি সাময়িকভাবে বন্ধ আছে' : 'স্টোর পাওয়া যায়নি'}
         </h1>
         <p className="opacity-70">Store is currently unavailable.</p>
       </div>
