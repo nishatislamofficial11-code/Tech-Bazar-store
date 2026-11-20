@@ -93,7 +93,7 @@ function AiChatPanel({ shopName, onClose }: { shopName: string; onClose: () => v
       const out = await widgetApi(visitor, { action: 'send', message: msg });
       setStatus(out.status || 'ai');
       if (out.reply) setMessages((m) => [...m, { id: `ai-${Date.now()}`, role: 'ai', content: out.reply, attachments: out.attachments }]);
-      else if (out.status === 'ai') setNote('আপনার মেসেজ পৌঁছেছে, শীঘ্রই উত্তর দেওয়া হবে।');
+      else setNote(out.status === 'ai' ? 'আপনার মেসেজ পৌঁছেছে, শীঘ্রই উত্তর দেওয়া হবে।' : 'আপনার মেসেজ আমাদের প্রতিনিধির কাছে পৌঁছেছে, তিনি শীঘ্রই উত্তর দেবেন।');
     } catch (err) {
       setNote(err instanceof Error ? err.message : 'এখন উত্তর দেওয়া যাচ্ছে না');
     } finally { setBusy(false); }
