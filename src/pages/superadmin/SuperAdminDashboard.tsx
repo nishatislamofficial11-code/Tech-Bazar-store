@@ -58,7 +58,7 @@ export default function SuperAdminDashboard() {
 
   const storeInfoText = (store: StoreRow, email: string, password?: string) => {
     const o = window.location.origin;
-    return `🛍️ আপনার স্টোরের তথ্য\n\nস্টোরের নাম: ${store.name}\nস্টোর লিংক: ${o}/?store=${store.slug}\n\nলগইন লিংক: ${o}/signin?store=${store.slug}\nইমেইল: ${email}` + (password ? `\nপাসওয়ার্ড: ${password}` : '');
+    return `🛍️ আপনার স্টোরের তথ্য\n\nস্টোরের নাম: ${store.name}\nস্টোর লিংক: ${o}/?store=${store.slug}\n\nলগইন লিংক: ${o}/merchant/login\nইমেইল: ${email}` + (password ? `\nপাসওয়ার্ড: ${password}` : '');
   };
 
   const copyText = (text: string) => {
@@ -215,7 +215,7 @@ export default function SuperAdminDashboard() {
   const copyCredentials = () => {
     if (!created) return;
     const storeUrl = `${window.location.origin}/?store=${created.slug}`;
-    const loginUrl = `${window.location.origin}/signin?store=${created.slug}`;
+    const loginUrl = `${window.location.origin}/merchant/login`;
     const text = `🛍️ আপনার নতুন স্টোর প্রস্তুত!\n\nস্টোরের নাম: ${created.storeName}\nস্টোর লিংক: ${storeUrl}\n\nলগইন লিংক: ${loginUrl}\nইমেইল: ${created.email}\nপাসওয়ার্ড: ${created.password}`;
     navigator.clipboard
       .writeText(text)
@@ -331,7 +331,7 @@ export default function SuperAdminDashboard() {
               <div className="text-sm text-slate-200 space-y-1 font-mono break-all">
                 <p>স্টোর: {created.storeName}</p>
                 <p>স্টোর লিংক: {window.location.origin}/?store={created.slug}</p>
-                <p>লগইন: {window.location.origin}/signin?store={created.slug}</p>
+                <p>লগইন: {window.location.origin}/merchant/login</p>
                 <p>ইমেইল: {created.email}</p>
                 <p>পাসওয়ার্ড: {created.password}</p>
               </div>
@@ -434,7 +434,7 @@ export default function SuperAdminDashboard() {
                     <div className="mt-3 space-y-3">
                       <div className="text-xs text-slate-300 space-y-1 font-mono break-all bg-slate-900 rounded-lg p-3">
                         <p>স্টোর লিংক: {window.location.origin}/?store={store.slug}</p>
-                        <p>লগইন: {window.location.origin}/signin?store={store.slug}</p>
+                        <p>লগইন: {window.location.origin}/merchant/login</p>
                         <p>ইমেইল: {store.admin_email || '—'}</p>
                         <p>
                           পাসওয়ার্ড:{' '}
