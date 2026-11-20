@@ -84,7 +84,15 @@ export function AiSuperCard({ stores }: { stores: ShopLite[] }) {
     } finally { setBusy(''); }
   };
 
+  // Key prefixes each company uses, to catch a key pasted under the wrong company
+  const KEY_PREFIX: Record<Provider, RegExp> = { anthropic: /^sk-ant-/, openai: /^sk-(?!ant-|or-)/, google: /^(AIza|AQ\.)/, groq: /^gsk_/, openrouter: /^sk-or-/ };
   const saveKey = async () => {
+    const typed = keys[current.keyName]?.trim();
+    if (typed && !KEY_PREFIX[provider].test(typed)) {
+      const owner = PROVIDERS.find((p) => KEY_PREFIX[p.id].test(typed));
+      toast.error(owner ? `এটা ${owner.label}-এর Key মনে হচ্ছে। উপরে ${owner.label} বেছে নিয়ে সেখানে বসান।` : `${current.label}-এর Key মনে হচ্ছে না, আবার দেখে নিন।`);
+      return;
+    }
     const chosenModel = model.trim() || current.models[0];
     if (!saved[current.keyName] && !keys[current.keyName]?.trim()) { toast.error(`${current.label}-এর API Key দিন`); return; }
     setBusy('key');

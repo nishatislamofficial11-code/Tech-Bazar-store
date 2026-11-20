@@ -86,10 +86,10 @@ function AiChatPanel({ shopName, onClose }: { shopName: string; onClose: () => v
   };
 
   return (
-    <div role="dialog" aria-label={`${shopName}-কে জিজ্ঞাসা করুন`}
+    <div role="dialog" aria-label={shopName ? `${shopName}-কে জিজ্ঞাসা করুন` : 'আমাদের জিজ্ঞাসা করুন'}
       className="fixed z-50 inset-x-3 bottom-24 md:inset-x-auto md:right-6 md:bottom-24 md:w-[380px] h-[min(70vh,560px)] flex flex-col rounded-3xl bg-white text-gray-900 shadow-[0_20px_60px_rgba(0,0,0,0.25)] border border-gray-100 overflow-hidden">
       <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
-        <p className="font-bold truncate">{shopName}-কে জিজ্ঞাসা করুন</p>
+        <p className="font-bold truncate">{shopName ? `${shopName}-কে জিজ্ঞাসা করুন` : 'আমাদের জিজ্ঞাসা করুন'}</p>
         <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100" aria-label="বন্ধ করুন"><X className="h-5 w-5 text-gray-500" /></button>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
@@ -130,7 +130,7 @@ export function FloatingWhatsApp() {
   const waUrl = settings.floating_whatsapp_enabled === 'true'
     ? createWhatsAppUrl(settings.whatsapp_number, 'Hello, I need help with an order.') : null;
   const aiOn = settings.ai_web_chat_enabled === 'true';
-  const shopName = settings.siteName || (settings as Record<string, string | undefined>).site_title || 'আমাদের';
+  const shopName = settings.siteName || (settings as Record<string, string | undefined>).site_title || '';
 
   if (loading || (!waUrl && !aiOn)) return null;
 
