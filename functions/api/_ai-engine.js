@@ -439,7 +439,7 @@ export async function handleCustomerMessage(cfg, store, conv, text, photos = [])
   } catch (err) {
     await refundReply(cfg, store.id);
     // A photo the AI couldn't read is for a person to look at, not a reason to retry
-    if (images.length && !err?.busy) return handOff('কাস্টমার ছবি পাঠিয়েছেন, AI দেখতে পারেনি। ছবি দেখে উত্তর দিন', BUSY_REPLY);
+    if (images.length && !err?.busy) return handOff(`কাস্টমার ছবি পাঠিয়েছেন, AI দেখতে পারেনি। ছবি দেখে উত্তর দিন (${String(err?.message || err).slice(0, 200)})`, BUSY_REPLY);
     return handOff(`${TECH}AI উত্তর দিতে পারেনি (${String(err?.message || err).slice(0, 220)})`, BUSY_REPLY);
   }
   if (!out || typeof out.reply !== 'string' || !out.reply.trim()) {
