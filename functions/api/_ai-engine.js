@@ -4,6 +4,7 @@
 // Each API is called over plain HTTPS: the official SDKs pull in Node-only modules
 // that the Cloudflare Worker bundle cannot include.
 import { rest, notifyStoreTelegram, escapeHtml } from './_store-lib.js';
+import { listModels, pickModel } from './_ai-models-lib.js';
 
 const PROVIDERS = {
   anthropic: { keyName: 'private_anthropic_api_key', defaultModel: 'claude-haiku-5-5' },
@@ -164,7 +165,11 @@ async function callApi(url, headers, body, label) {
     const detail = String(data?.error?.message || '').slice(0, 150);
     if (res.status === 401 || res.status === 403) throw new Error(`${label} API Key ভুল বা অনুমতি নেই (${detail})`);
     if (res.status === 429) throw new Error(`${label} ব্যস্ত বা লিমিট/ব্যালান্স শেষ (${detail})`);
-    if (res.status === 404) throw new Error(`${label}-এ এই মডেল পাওয়া যায়নি, সুপার এডমিনে মডেলের নাম ঠিক করুন (${detail})`);
+    if (res.status === 404 || /does not exist|not found|no longer available|decommission|deprecated/i.test(detail)) {
+      const err = new Error(`${label}-এ এই মডেল পাওয়া যায়নি (${detail})`);
+      err.modelMissing = true;
+      throw err;
+    }
     throw new Error(`${label}: ${detail || `HTTP ${res.status}`}`);
   }
   return data;
@@ -215,13 +220,32 @@ async function askGemini(platform, system, context, messages) {
   return parseJson(data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join(''));
 }
 
-async function askAi(platform, ai, context, history) {
+async function askAiOnce(platform, ai, context, history) {
   const system = systemPrompt(ai);
   const ctx = `# দোকানের তথ্য\n${context}`;
   const messages = toApiMessages(history);
   if (OPENAI_STYLE[platform.provider]) return askOpenAI(platform, system, ctx, messages);
   if (platform.provider === 'google') return askGemini(platform, system, ctx, messages);
   return askAnthropic(platform, system, ctx, messages);
+}
+
+// If the saved model has been retired, pick a current one from the company's live list,
+// save it for everyone, and try again once.
+async function askAi(cfg, platform, ai, context, history) {
+  try {
+    return await askAiOnce(platform, ai, context, history);
+  } catch (err) {
+    if (!err?.modelMissing) throw err;
+    const models = await listModels(platform.provider, platform.apiKey).catch(() => []);
+    const next = pickModel(platform.provider, models, platform.model);
+    if (!next) throw err;
+    await rest(cfg, 'platform_settings?on_conflict=key', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ key: 'ai_model', value: next, updated_at: new Date().toISOString() }),
+    }).catch(() => null);
+    return askAiOnce({ ...platform, model: next }, ai, context, history);
+  }
 }
 
 async function addMessage(cfg, conv, role, content, extra = {}) {
@@ -300,7 +324,7 @@ export async function handleCustomerMessage(cfg, store, conv, text) {
   const history = await rest(cfg, `ai_messages?conversation_id=eq.${conv.id}&select=role,content&order=created_at.desc&limit=${HISTORY_LIMIT}`);
   let out;
   try {
-    out = await askAi(platform, ai, await shopContext(cfg, store, ai), (history || []).reverse());
+    out = await askAi(cfg, platform, ai, await shopContext(cfg, store, ai), (history || []).reverse());
   } catch (err) {
     await refundReply(cfg, store.id);
     return handOff(`${TECH}AI উত্তর দিতে পারেনি (${String(err?.message || err).slice(0, 220)})`, BUSY_REPLY);
