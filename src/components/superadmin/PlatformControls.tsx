@@ -124,7 +124,7 @@ export function PlatformSettingsCard() {
 
 // Landing page content: everything visitors see on the Cloud Commerce site
 const LANDING_FIELDS: { key: string; label: string; hint?: string; long?: boolean; group: string }[] = [
-  { group: 'প্রথম অংশ (হিরো)', key: 'landing_badge', label: 'ছোট ব্যাজ', hint: 'বাংলাদেশি ব্যবসার জন্য বানানো' },
+  { group: 'প্রথম অংশ (হিরো)', key: 'landing_badge', label: 'ছোট ব্যাজ', hint: 'No. 1 Online business partner' },
   { group: 'প্রথম অংশ (হিরো)', key: 'landing_hero_title', label: 'শিরোনাম', hint: 'এক প্ল্যাটফর্মে আপনার' },
   { group: 'প্রথম অংশ (হিরো)', key: 'landing_hero_highlight', label: 'শিরোনামের রঙিন অংশ', hint: 'পুরো অনলাইন ব্যবসা' },
   { group: 'প্রথম অংশ (হিরো)', key: 'landing_hero_subtitle', label: 'নিচের বর্ণনা', long: true },
