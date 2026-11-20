@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import { Save, Settings, Send, Zap, Plus, Trash2, Bot, Search, Image as ImageIcon, Smartphone, QrCode, Copy, Check, ShieldCheck, Download } from 'lucide-react';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { Store, MessageCircle, Share2, Truck, CreditCard, PackageCheck, Target, TrendingUp, Wallet, ArrowLeft, ChevronRight } from 'lucide-react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { sendTelegramMessage, autoFetchTelegramChatId, TelegramBotItem, parseTelegramBots } from '../../lib/telegramApi';
 import { CloudinaryUpload } from '../../components/CloudinaryUpload';
@@ -20,13 +22,30 @@ const tabs = [
   { id: 'payments', label: 'পেমেন্ট' },
 ];
 
+// Settings home: one card per area, like a "Manage Shop" page. Cards with `to` open another admin page.
+const settingCards: { id?: string; to?: string; title: string; desc: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'general', title: 'General', desc: 'দোকানের নাম, লোগো, কপিরাইট আর ছবির স্টোরেজ।', icon: Store },
+  { id: 'contact', title: 'Contact & WhatsApp', desc: 'ফোন, WhatsApp আর ফোনে অর্ডার নেওয়ার সেটিংস।', icon: MessageCircle },
+  { id: 'social', title: 'Social Media', desc: 'ওয়েবসাইটের ফুটারে ফেসবুক, ইউটিউব, ইনস্টাগ্রামের লিংক।', icon: Share2 },
+  { id: 'delivery', title: 'Checkout & Delivery', desc: 'ডেলিভারি চার্জ, এলাকা আর চেকআউটের নিয়ম।', icon: Truck },
+  { id: 'payments', title: 'পেমেন্ট', desc: 'ক্যাশ অন ডেলিভারি, অগ্রিম আর অনলাইন পেমেন্ট গেটওয়ে।', icon: CreditCard },
+  { to: '/admin/couriers', title: 'Logistics', desc: 'Steadfast ও Pathao কুরিয়ার যুক্ত করুন।', icon: PackageCheck },
+  { id: 'telegram', title: 'Telegram Notifications', desc: 'নতুন অর্ডার এলেই টেলিগ্রামে খবর পান।', icon: Send },
+  { to: '/admin/pixel', title: 'Tracking & Pixel', desc: 'ফেসবুক পিক্সেল, টিকটক পিক্সেল আর ক্যাটালগ ফিড।', icon: Target },
+  { to: '/admin/seo', title: 'SEO', desc: 'গুগলে খুঁজে পাওয়ার জন্য টাইটেল, বর্ণনা আর sitemap।', icon: TrendingUp },
+  { id: 'mobile_app', title: 'Mobile App Connect', desc: 'অ্যান্ড্রয়েড এডমিন অ্যাপের সাথে দোকান যুক্ত করুন।', icon: Smartphone },
+  { to: '/admin/billing', title: 'Billing', desc: 'আপনার Cloud Commerce প্ল্যান আর পেমেন্ট।', icon: Wallet },
+];
+
 export default function AdminSettings() {
+  const navigate = useNavigate();
+  const [cardQuery, setCardQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dbError, setDbError] = useState(false);
   const { refreshSettings } = useSettings();
   
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState<string | null>(null);
 
   const [telegramBots, setTelegramBots] = useState<TelegramBotItem[]>([
     { id: 'bot-1', name: 'Bot #1 (Main)', bot_token: '', chat_id: '' }
@@ -316,43 +335,49 @@ WITH CHECK (
       animate="show"
       className="pb-12 max-w-5xl mx-auto font-sans"
     >
-      {/* Top Header & Tabs (Untitled UI Style) */}
-      <div className="flex flex-col gap-6 mb-8 px-4 sm:px-0 pt-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-           <h1 className="text-2xl sm:text-[30px] font-semibold text-gray-900 tracking-tight">Settings</h1>
-           <div className="relative w-full sm:w-auto">
-             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-             <input 
-               type="text" 
-               placeholder="Search settings..." 
-               className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary w-full sm:w-[280px] shadow-sm transition-all outline-none" 
-             />
-           </div>
-        </div>
-
-        <div className="flex overflow-x-auto hide-scrollbar">
-           <nav className="flex space-x-1 sm:space-x-2 border-b border-gray-200 w-full" aria-label="Tabs">
-             {tabs.map(tab => {
-               const isActive = activeTab === tab.id;
-               return (
-                 <button
-                   key={tab.id}
-                   onClick={(e) => { e.preventDefault(); setActiveTab(tab.id); }}
-                   className={`px-3 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors focus:outline-none ${
-                     isActive 
-                     ? 'border-primary text-primary' 
-                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                   }`}
-                 >
-                   {tab.label}
-                 </button>
-               );
-             })}
-           </nav>
-        </div>
+      <div className="mb-6 px-4 sm:px-0 pt-4">
+        {activeTab === null ? (
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-[30px] font-semibold text-gray-900 tracking-tight">Settings</h1>
+              <p className="mt-1 text-sm text-gray-500">যে অংশ বদলাতে চান, সেটায় চাপুন।</p>
+            </div>
+            <div className="relative w-full sm:w-auto">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input type="text" value={cardQuery} onChange={(e) => setCardQuery(e.target.value)} placeholder="Search settings..."
+                className="pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary w-full sm:w-[280px] shadow-sm transition-all outline-none" />
+            </div>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setActiveTab(null)}
+            className="inline-flex items-center gap-2 rounded-xl px-3 py-2 -ml-3 text-[15px] font-semibold text-gray-700 hover:bg-gray-100 active:scale-[0.97] transition-all">
+            <ArrowLeft className="h-5 w-5" /> সব সেটিংস
+          </button>
+        )}
       </div>
 
-      {dbError ? (
+      {activeTab === null ? (
+        <div className="grid gap-4 px-4 sm:px-0 sm:grid-cols-2 lg:grid-cols-3">
+          {settingCards
+            .filter((c) => !cardQuery.trim() || `${c.title} ${c.desc}`.toLowerCase().includes(cardQuery.trim().toLowerCase()))
+            .map((c) => (
+              <button key={c.title} type="button"
+                onClick={() => (c.to ? navigate(c.to) : setActiveTab(c.id!))}
+                className="group flex flex-col items-start gap-4 rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <c.icon className="h-6 w-6" />
+                </span>
+                <span className="w-full">
+                  <span className="flex items-center justify-between gap-2 text-[17px] font-bold text-gray-900">
+                    {c.title}
+                    <ChevronRight className="h-5 w-5 text-gray-300 transition-colors group-hover:text-primary" />
+                  </span>
+                  <span className="mt-1 block text-sm leading-relaxed text-gray-500">{c.desc}</span>
+                </span>
+              </button>
+            ))}
+        </div>
+      ) : dbError ? (
         <div className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-md mx-4 sm:mx-0">
           <h3 className="text-lg font-bold text-orange-800 mb-2">Database Setup Required</h3>
           <p className="text-orange-700 mb-4">To enable settings management, please run this SQL query in your Supabase SQL Editor:</p>
@@ -377,7 +402,7 @@ WITH CHECK (
            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-gray-200 pb-5">
              <div>
                 <h2 className="text-lg font-semibold text-gray-900">
-                  {tabs.find(t => t.id === activeTab)?.label}
+                  {settingCards.find(c => c.id === activeTab)?.title || tabs.find(t => t.id === activeTab)?.label}
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
                   {activeTab === 'general' && 'Update your site branding, copyright, and image storage config.'}
@@ -386,9 +411,9 @@ WITH CHECK (
                   {activeTab === 'delivery' && 'Configure delivery charges and checkout rules.'}
                   {activeTab === 'telegram' && 'Add multiple bots to receive instant order notifications.'}
                   {activeTab === 'mobile_app' && 'Connect and sync your store with the Android Admin mobile application.'}
+                  {activeTab === 'payments' && 'ক্রেতারা কীভাবে টাকা দেবে আর কোন গেটওয়ে ব্যবহার হবে।'}
                 </p>
              </div>
-             {activeTab === 'payments' && <StorePaymentSettings />}
              {activeTab !== 'mobile_app' && activeTab !== 'payments' && (
                <div className="flex items-center gap-3 shrink-0">
                   <button type="button" onClick={() => fetchSettings()} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200">
@@ -400,6 +425,8 @@ WITH CHECK (
                </div>
              )}
            </div>
+
+           {activeTab === 'payments' && <StorePaymentSettings />}
 
            {/* Form Content Area */}
            <div className="space-y-1 divide-y divide-gray-200">
