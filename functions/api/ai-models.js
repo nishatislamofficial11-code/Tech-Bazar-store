@@ -4,6 +4,7 @@
  * Uses the saved key when `key` is empty. Returns { ok, models: [{ id, name }] }.
  */
 import { serverConfig, rest } from './_store-lib.js';
+import { listModels } from './_ai-models-lib.js';
 
 const json = (payload, status = 200) => new Response(JSON.stringify(payload), {
   status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
@@ -19,46 +20,6 @@ async function isSuperAdmin(cfg, authHeader) {
     method: 'POST', headers: { apikey: cfg.anonKey, Authorization: authHeader, 'Content-Type': 'application/json' }, body: '{}',
   });
   return res.ok && (await res.json()) === true;
-}
-
-async function listModels(provider, key) {
-  let res;
-  if (provider === 'anthropic') {
-    res = await fetch('https://api.anthropic.com/v1/models?limit=100', { headers: { 'x-api-key': key, 'anthropic-version': '2026-10-21' } });
-  } else if (provider === 'groq') {
-    res = await fetch('https://api.groq.com/openai/v1/models', { headers: { Authorization: `Bearer ${key}` } });
-  } else if (provider === 'openrouter') {
-    res = await fetch('https://openrouter.ai/api/v1/models', { headers: { Authorization: `Bearer ${key}` } });
-  } else if (provider === 'openai') {
-    res = await fetch('https://api.openai.com/v1/models', { headers: { Authorization: `Bearer ${key}` } });
-  } else {
-    res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key } });
-  }
-  const data = await res.json().catch(() => null);
-  if (!res.ok) {
-    if (res.status === 400 || res.status === 401 || res.status === 403) throw new Error('API Key ভুল বা অনুমতি নেই');
-    throw new Error(data?.error?.message || `HTTP ${res.status}`);
-  }
-  if (provider === 'anthropic') return (data?.data || []).map((m) => ({ id: m.id, name: m.display_name || m.id }));
-  if (provider === 'groq') {
-    return (data?.data || [])
-      .filter((m) => m.active !== false && !/(whisper|tts|guard|playai|orpheus)/i.test(m.id))
-      .map((m) => ({ id: m.id, name: m.id }));
-  }
-  if (provider === 'openrouter') {
-    // Only the free models (their ids end in ':free')
-    return (data?.data || []).filter((m) => /:free$/.test(m.id)).map((m) => ({ id: m.id, name: m.name || m.id }));
-  }
-  if (provider === 'openai') {
-    return (data?.data || [])
-      .map((m) => m.id)
-      .filter((id) => /^(gpt|o\d|chatgpt)/i.test(id) && !/(audio|realtime|tts|transcribe|image|search|embedding|instruct)/i.test(id))
-      .sort()
-      .map((id) => ({ id, name: id }));
-  }
-  return (data?.models || [])
-    .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini/i.test(m.name || ''))
-    .map((m) => ({ id: String(m.name).replace(/^models\//, ''), name: m.displayName || m.name }));
 }
 
 export async function onRequest(context) {
