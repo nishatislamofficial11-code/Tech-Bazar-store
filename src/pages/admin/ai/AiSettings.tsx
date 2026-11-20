@@ -11,7 +11,7 @@ function WebsiteChatCard() {
   const hasNumber = Boolean(settings.whatsapp_number?.trim());
   const toggle = async (key: 'ai_web_chat_enabled' | 'floating_whatsapp_enabled', on: boolean) => {
     setBusy(key);
-    const { error } = await supabase.from('settings').upsert({ key, value: on ? 'true' : 'false' }, { onConflict: 'key' });
+    const { error } = await supabase.from('settings').upsert({ key, value: on ? 'true' : 'false' }, { onConflict: 'store_id,key' });
     setBusy('');
     if (error) return toast.error(error.message);
     await refreshSettings();

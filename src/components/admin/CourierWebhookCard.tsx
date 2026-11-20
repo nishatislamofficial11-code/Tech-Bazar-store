@@ -23,7 +23,7 @@ export default function CourierWebhookCard() {
   const generate = async () => {
     if (token && !window.confirm('নতুন টোকেন বানালে পুরনো টোকেন আর কাজ করবে না। কুরিয়ার প্যানেলে নতুনটা বসাতে হবে। চালিয়ে যাবেন?')) return;
     setBusy(true);
-    const { error } = await supabase.from('settings').upsert({ key: 'courier_webhook_token', value: newToken() }, { onConflict: 'key' });
+    const { error } = await supabase.from('settings').upsert({ key: 'courier_webhook_token', value: newToken() }, { onConflict: 'store_id,key' });
     setBusy(false);
     if (error) return toast.error(error.message);
     await refreshSettings();
