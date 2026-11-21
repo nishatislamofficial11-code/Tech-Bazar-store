@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import { buildCloudinaryUrl } from '../../lib/cloudinary';
+import { useReveal } from './useReveal';
 
 export interface FashionCardProduct {
   id: string;
@@ -42,9 +43,10 @@ export function FashionProductCard({ product }: { product: FashionCardProduct })
   const op = Number(product.original_price || product.originalPrice || 0);
   const off = op > product.price ? Math.round((1 - product.price / op) * 100) : 0;
   const badge = badgeOf(product);
+  const reveal = useReveal();
 
   return (
-    <div className="group flex flex-col h-full">
+    <div ref={reveal.ref} className={`group flex flex-col h-full ${reveal.className}`}>
       <Link to={url} className="relative block aspect-[3/4] rounded-2xl overflow-hidden bg-slate-100">
         {product.image && (
           <img src={buildCloudinaryUrl(product.image, 'w_500,h_667,c_fill,f_auto,q_auto')} alt={product.title} loading="lazy" decoding="async"
