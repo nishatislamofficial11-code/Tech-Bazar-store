@@ -62,13 +62,13 @@ function Heading({ title, subtitle, onPrev, onNext, viewAll }: { title: string; 
   );
 }
 
-const AUTO_SLIDE_MS = 3500;
+const AUTO_SLIDE_MS = 2500;
 
 /** Horizontal row with ◀ ▶ buttons. Slides by itself one card at a time; pauses while the visitor is using it. */
 function Carousel({ title, subtitle, items, render, itemClass }: { title: string; subtitle?: string; items: any[]; render: (x: any) => React.ReactNode; itemClass: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const pausedUntil = useRef(0);
-  const pause = () => { pausedUntil.current = Date.now() + 8000; };
+  const pause = () => { pausedUntil.current = Date.now() + 5000; };
   const step = () => {
     const el = ref.current;
     const card = el?.firstElementChild as HTMLElement | null;
