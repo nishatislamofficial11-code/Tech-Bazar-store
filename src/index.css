@@ -3,6 +3,7 @@
 @theme {
   --color-primary: #0066ff;
   --color-primary-hover: #005ce6;
+  --color-secondary: #10b981;
   --color-payment-text: #17212b;
   --color-payment-muted: #64748b;
   --color-payment-surface: #ffffff;
