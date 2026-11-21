@@ -57,7 +57,9 @@ export async function onRequest(context) {
         });
       }
       const conv = rows[0];
-      const result = await handleCustomerMessage(cfg, store, conv, message);
+      const work = handleCustomerMessage(cfg, store, conv, message);
+      context.waitUntil?.(work.catch(() => null));
+      const result = await work;
       return json({ ok: true, conversation_id: conv.id, ...result });
     }
 
