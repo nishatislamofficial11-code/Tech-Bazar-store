@@ -62,14 +62,43 @@ function Heading({ title, subtitle, onPrev, onNext, viewAll }: { title: string; 
   );
 }
 
+const AUTO_SLIDE_MS = 3500;
+
+/** Horizontal row with ◀ ▶ buttons. Slides by itself one card at a time; pauses while the visitor is using it. */
 function Carousel({ title, subtitle, items, render, itemClass }: { title: string; subtitle?: string; items: any[]; render: (x: any) => React.ReactNode; itemClass: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const move = (dir: number) => ref.current?.scrollBy({ left: dir * ref.current.clientWidth * 0.8, behavior: 'smooth' });
+  const pausedUntil = useRef(0);
+  const pause = () => { pausedUntil.current = Date.now() + 8000; };
+  const step = () => {
+    const el = ref.current;
+    const card = el?.firstElementChild as HTMLElement | null;
+    return card ? card.offsetWidth + 20 : (el?.clientWidth || 0) * 0.8;
+  };
+  const move = (dir: number) => {
+    pause();
+    ref.current?.scrollBy({ left: dir * step(), behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (items.length < 2 || isBot()) return;
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const t = setInterval(() => {
+      const el = ref.current;
+      if (!el || Date.now() < pausedUntil.current || el.scrollWidth <= el.clientWidth + 4) return;
+      const rect = el.getBoundingClientRect();
+      if (rect.bottom < 0 || rect.top > window.innerHeight) return; // only while on screen
+      if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 8) el.scrollTo({ left: 0, behavior: 'smooth' });
+      else el.scrollBy({ left: step(), behavior: 'smooth' });
+    }, AUTO_SLIDE_MS);
+    return () => clearInterval(t);
+  }, [items.length]);
+
   if (!items.length) return null;
   return (
     <section className="mt-12 sm:mt-16 px-4 sm:px-6">
       <Heading title={title} subtitle={subtitle} onPrev={() => move(-1)} onNext={() => move(1)} />
-      <div ref={ref} className="flex gap-5 overflow-x-auto snap-x snap-mandatory scroll-px-4 sm:scroll-px-6 hide-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6 pb-2">
+      <div ref={ref} onTouchStart={pause} onPointerDown={pause} onWheel={pause} onMouseEnter={pause}
+        className="flex items-start gap-5 overflow-x-auto snap-x snap-mandatory scroll-px-4 sm:scroll-px-6 hide-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6 pb-2">
         {items.map((x, i) => <div key={x.id || i} className={`snap-start shrink-0 ${itemClass}`}>{render(x)}</div>)}
       </div>
     </section>
