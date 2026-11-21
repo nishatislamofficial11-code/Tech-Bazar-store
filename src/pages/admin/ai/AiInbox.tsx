@@ -39,6 +39,7 @@ export default function AiInbox() {
   const [messages, setMessages] = useState<AiMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const loadList = useCallback(async () => {
@@ -67,6 +68,13 @@ export default function AiInbox() {
   }, [openId, loadMessages]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ block: 'end' }); }, [messages.length]);
+  // On phones the open chat covers the screen; stop the page behind it from scrolling
+  useEffect(() => {
+    if (!openId || window.matchMedia('(min-width: 1024px)').matches) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [openId]);
 
   const counts = useMemo(() => ({
     needs_human: convs.filter((c) => c.status === 'needs_human').length,
@@ -111,6 +119,7 @@ export default function AiInbox() {
   };
 
   const openChat = (c: AiConversation) => {
+    setShowInfo(false);
     setOpenId(c.id);
     setMessages([]);
     if (c.unread && c.status !== 'needs_human') supabase.from('ai_conversations').update({ unread: 0 }).eq('id', c.id).then(() => loadList());
@@ -175,46 +184,55 @@ export default function AiInbox() {
           </div>
         </div>
 
-        {/* Conversation */}
-        <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-[520px] lg:min-h-0 ${openId ? 'flex' : 'hidden lg:flex'}`}>
+        {/* Conversation: full screen on phones, right column on large screens */}
+        <div className={`${openId ? 'flex' : 'hidden lg:flex'} flex-col bg-white fixed inset-0 z-[70] lg:static lg:z-auto lg:rounded-2xl lg:border lg:border-gray-100 lg:shadow-sm lg:min-h-0`}>
           {!open ? (
             <div className="flex-1 flex items-center justify-center text-sm text-gray-400">বাম পাশ থেকে একটা চ্যাট বেছে নিন</div>
           ) : (
             <>
-              <div className="p-3 border-b border-gray-100 flex flex-wrap items-center gap-2">
-                <button onClick={() => setOpenId(null)} className="lg:hidden p-1.5 rounded-lg hover:bg-gray-100" aria-label="ফিরে যান"><ArrowLeft className="h-5 w-5" /></button>
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-gray-900 truncate">{open.customer_name || 'অজানা কাস্টমার'}</p>
-                  <p className="text-xs text-gray-500">{CHANNEL_LABEL[open.channel]}{open.customer_phone ? ` · ${open.customer_phone}` : ''}</p>
+              {/* Header: always visible */}
+              <div className="shrink-0 flex items-center gap-2 px-2 py-2 lg:px-3 border-b border-gray-100 bg-white">
+                <button onClick={() => setOpenId(null)} className="lg:hidden p-2 rounded-full hover:bg-gray-100" aria-label="ফিরে যান"><ArrowLeft className="h-5 w-5" /></button>
+                <div className="h-9 w-9 shrink-0 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center">
+                  {(open.customer_name || '?').trim().charAt(0).toUpperCase()}
                 </div>
-                {open.status === 'needs_human' && (
-                  <button onClick={() => join(open)} className="flex items-center gap-1.5 bg-primary text-white text-xs font-bold px-3 py-2 rounded-xl"><Hand className="h-4 w-4" />Join</button>
-                )}
-                {open.status === 'ai' && (
-                  <button onClick={() => join(open)} className="flex items-center gap-1.5 border border-gray-200 text-gray-700 text-xs font-bold px-3 py-2 rounded-xl hover:bg-gray-50"><UserRound className="h-4 w-4" />AI থামিয়ে নিজে উত্তর দিন</button>
-                )}
-                {(open.status === 'assigned' || open.status === 'needs_human') && (
-                  <button onClick={() => resolve(open)} className="flex items-center gap-1.5 bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded-xl"><CheckCircle2 className="h-4 w-4" />Resolve</button>
-                )}
-                {open.status === 'resolved' && (
-                  <button onClick={() => backToAi(open)} className="flex items-center gap-1.5 border border-gray-200 text-gray-700 text-xs font-bold px-3 py-2 rounded-xl"><Bot className="h-4 w-4" />AI চালু</button>
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-sm text-gray-900 truncate">{open.customer_name || 'অজানা কাস্টমার'}</p>
+                  <p className="text-[11px] text-gray-500 truncate">
+                    {CHANNEL_LABEL[open.channel]}{open.customer_phone ? ` · ${open.customer_phone}` : ''}
+                    {' · '}
+                    <span className={open.status === 'needs_human' ? 'text-red-600 font-bold' : open.status === 'assigned' ? 'text-amber-600 font-bold' : ''}>
+                      {open.status === 'needs_human' ? 'Human Need' : open.status === 'assigned' ? (open.assigned_name || 'Agent') : open.status === 'ai' ? 'AI' : 'সমাধান'}
+                    </span>
+                  </p>
+                </div>
+                {(open.status === 'assigned' || open.status === 'needs_human') && !lockedByOther && (
+                  <button onClick={() => resolve(open)} className="shrink-0 flex items-center gap-1 bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded-full">
+                    <CheckCircle2 className="h-4 w-4" />Resolve
+                  </button>
                 )}
               </div>
 
-              {(open.status === 'needs_human' || open.summary) && (
-                <div className={`mx-3 mt-3 rounded-xl px-3 py-2 text-xs ${open.status === 'needs_human' ? 'bg-red-50 text-red-800' : 'bg-gray-50 text-gray-600'}`}>
-                  {open.status === 'needs_human' && open.handoff_reason && <p><b>কেন এজেন্ট দরকার:</b> {open.handoff_reason}</p>}
-                  {open.summary && <p><b>সারাংশ:</b> {open.summary}</p>}
-                </div>
-              )}
+              {/* Why a person is needed: one line, tap for more */}
+              {(open.status === 'needs_human' && open.handoff_reason) || open.summary ? (
+                <button onClick={() => setShowInfo((v) => !v)}
+                  className={`shrink-0 text-left px-4 py-2 text-xs border-b ${open.status === 'needs_human' ? 'bg-red-50 text-red-800 border-red-100' : 'bg-gray-50 text-gray-600 border-gray-100'}`}>
+                  <p className={showInfo ? '' : 'line-clamp-1'}>
+                    {open.status === 'needs_human' && open.handoff_reason ? <><b>কারণ:</b> {open.handoff_reason}</> : <><b>সারাংশ:</b> {open.summary}</>}
+                  </p>
+                  {showInfo && open.status === 'needs_human' && open.summary && <p className="mt-1"><b>সারাংশ:</b> {open.summary}</p>}
+                  <span className="text-[10px] opacity-70">{showInfo ? 'কম দেখান ▲' : 'বিস্তারিত ▼'}</span>
+                </button>
+              ) : null}
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-2 min-h-0">
+              {/* Messages: the only part that scrolls */}
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3 space-y-2 bg-gray-50/60">
                 {messages.map((m) => {
                   const mine = m.role !== 'customer';
                   return (
                     <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap break-words ${
-                        m.role === 'customer' ? 'bg-gray-100 text-gray-900 rounded-bl-md'
+                      <div className={`min-w-0 max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${
+                        m.role === 'customer' ? 'bg-white border border-gray-100 text-gray-900 rounded-bl-md'
                           : m.role === 'ai' ? 'bg-primary/10 text-gray-900 rounded-br-md'
                             : 'bg-primary text-white rounded-br-md'}`}>
                         {m.content}
@@ -229,22 +247,31 @@ export default function AiInbox() {
                 <div ref={bottomRef} />
               </div>
 
-              <div className="p-3 border-t border-gray-100">
+              {/* Bottom: the next thing to do */}
+              <div className="shrink-0 p-2 lg:p-3 border-t border-gray-100 bg-white pb-[max(0.5rem,env(safe-area-inset-bottom))]">
                 {lockedByOther ? (
                   <p className="text-center text-xs text-gray-500 py-2">{open.assigned_name || 'অন্য এজেন্ট'} এই চ্যাট দেখছেন</p>
                 ) : open.status === 'assigned' ? (
-                  <div className="flex gap-2">
-                    <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={2} placeholder="উত্তর লিখুন…"
+                  <div className="flex items-end gap-2">
+                    <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={1} placeholder="উত্তর লিখুন…"
                       onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-                      className="flex-1 resize-none rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-primary" />
-                    <button onClick={send} disabled={sending || !draft.trim()} className="self-end bg-primary text-white rounded-xl px-4 py-2.5 disabled:opacity-50" aria-label="পাঠান">
+                      className="flex-1 min-w-0 resize-none max-h-32 rounded-2xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:border-primary" />
+                    <button onClick={send} disabled={sending || !draft.trim()} className="h-11 w-11 shrink-0 bg-primary text-white rounded-full flex items-center justify-center disabled:opacity-50" aria-label="পাঠান">
                       <Send className="h-4 w-4" />
                     </button>
                   </div>
+                ) : open.status === 'needs_human' ? (
+                  <button onClick={() => join(open)} className="w-full flex items-center justify-center gap-2 bg-primary text-white text-sm font-bold py-3 rounded-xl">
+                    <Hand className="h-5 w-5" />Join করে উত্তর দিন
+                  </button>
+                ) : open.status === 'ai' ? (
+                  <button onClick={() => join(open)} className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-700 text-sm font-bold py-3 rounded-xl">
+                    <UserRound className="h-5 w-5" />AI থামিয়ে নিজে উত্তর দিন
+                  </button>
                 ) : (
-                  <p className="text-center text-xs text-gray-500 py-2">
-                    {open.status === 'needs_human' ? 'উত্তর দিতে উপরে Join চাপুন' : open.status === 'ai' ? 'AI এই চ্যাটে উত্তর দিচ্ছে' : 'চ্যাটটা সমাধান হয়েছে'}
-                  </p>
+                  <button onClick={() => backToAi(open)} className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-700 text-sm font-bold py-3 rounded-xl">
+                    <Bot className="h-5 w-5" />আবার AI চালু করুন
+                  </button>
                 )}
               </div>
             </>
