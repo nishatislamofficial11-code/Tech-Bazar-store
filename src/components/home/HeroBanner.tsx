@@ -10,7 +10,7 @@ export const HeroBanner = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [banners, setBanners] = useState<any[]>(() => {
     const cached = getCachedData('home_banners_cache');
-    return Array.isArray(cached) ? cached : [];
+    return Array.isArray(cached) ? cached.filter((b: any) => (b.placement || 'hero') === 'hero') : [];
   });
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -27,7 +27,9 @@ export const HeroBanner = () => {
     try {
       const { data } = await supabase.from('banners').select('*').eq('is_active', true).order('created_at', { ascending: false });
       if (data && data.length > 0) {
-        setBanners(data);
+        // Middle banners belong to the Fashion theme's middle slot
+        const top = data.filter((b: any) => (b.placement || 'hero') === 'hero');
+        setBanners(top);
         setCachedData('home_banners_cache', data, 60);
       }
     } catch (e) {

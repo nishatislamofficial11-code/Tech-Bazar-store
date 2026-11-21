@@ -22,7 +22,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { useSettings } from '../../contexts/SettingsContext';
-import { CloudinaryUpload } from '../../components/CloudinaryUpload';
+import { Link } from 'react-router-dom';
+import { STORE_THEMES, themeIdOf, StoreThemeInfo } from '../../lib/storeTheme';
 
 interface ThemeState {
   theme_primary_color: string;
@@ -44,10 +45,6 @@ interface ThemeState {
   theme_announcement_color: string;
   theme_announcement_link: string;
   active_theme: string;
-  home_hero_title: string;
-  home_hero_text: string;
-  home_hero_button: string;
-  home_hero_image: string;
 }
 
 const DEFAULT_SETTINGS: ThemeState = {
@@ -70,52 +67,7 @@ const DEFAULT_SETTINGS: ThemeState = {
   theme_announcement_color: '#ffffff',
   theme_announcement_link: '',
   active_theme: 'default',
-  home_hero_title: 'নতুন কালেকশন এসে গেছে',
-  home_hero_text: 'সেরা মানের পণ্য, সারা বাংলাদেশে ক্যাশ অন ডেলিভারি।',
-  home_hero_button: 'এখনই কিনুন',
-  home_hero_image: '',
 };
-
-// Home page designs: only the first page changes; product, cart and checkout pages stay the same.
-const HOME_DESIGNS = [
-  { id: 'default', name: 'Classic', desc: 'ব্যানার স্লাইডার, গোল ক্যাটাগরি, ফ্ল্যাশ সেল — সব ধরনের দোকানের জন্য' },
-  { id: 'boutique', name: 'Boutique', desc: 'নরম রঙের হিরো, বড় ছবির ক্যাটাগরি — ফ্যাশন, বিউটি, লাইফস্টাইল' },
-  { id: 'bold', name: 'Bold', desc: 'ডার্ক হিরো, ক্যাটাগরি চিপস, স্ক্রল অফার — গ্যাজেট, ইলেকট্রনিক্স, ট্রেন্ডি' },
-];
-
-function DesignPreview({ id }: { id: string }) {
-  const bar = <div className="h-2 flex items-center justify-between px-1.5 bg-white border-b border-slate-100"><i className="w-5 h-1 rounded bg-slate-300 block" /><i className="w-2 h-1 rounded bg-slate-300 block" /></div>;
-  const cards = (
-    <div className="grid grid-cols-2 gap-1 px-1.5">
-      {[0, 1].map((i) => <div key={i} className="rounded bg-white border border-slate-100 p-0.5"><div className="aspect-square rounded-sm bg-slate-200" /><i className="mt-0.5 w-3/4 h-0.5 rounded bg-slate-300 block" /></div>)}
-    </div>
-  );
-  if (id === 'boutique') return (
-    <div className="h-full bg-white">{bar}
-      <div className="m-1.5 rounded-md bg-primary/10 p-1.5 grid grid-cols-[1.2fr_1fr] gap-1 items-center">
-        <div className="space-y-0.5"><i className="w-full h-1 rounded bg-slate-700 block" /><i className="w-2/3 h-1 rounded bg-slate-700 block" /><i className="w-4 h-1.5 rounded-full bg-primary block mt-1" /></div>
-        <div className="aspect-[4/5] rounded-t-full rounded-b bg-primary/40" />
-      </div>
-      <div className="grid grid-cols-2 gap-1 px-1.5">{[0, 1].map((i) => <div key={i} className="h-2.5 rounded bg-slate-100" />)}</div>
-      <div className="grid grid-cols-3 gap-1 px-1.5 mt-1.5">{[0, 1, 2].map((i) => <div key={i} className="aspect-square rounded bg-slate-200" />)}</div>
-    </div>
-  );
-  if (id === 'bold') return (
-    <div className="h-full bg-white">{bar}
-      <div className="m-1.5 h-12 rounded-md bg-slate-900 p-1.5 flex flex-col justify-end"><i className="w-3/4 h-1.5 rounded bg-white block" /><i className="mt-1 w-5 h-1.5 rounded bg-white/80 block" /></div>
-      <div className="flex gap-1 px-1.5">{[0, 1, 2].map((i) => <i key={i} className="h-2 w-6 rounded-full border border-slate-300 block" />)}</div>
-      <div className="mt-1.5">{cards}</div>
-    </div>
-  );
-  return (
-    <div className="h-full bg-white">{bar}
-      <div className="m-1.5 h-8 rounded-md bg-gradient-to-r from-primary to-primary/60" />
-      <div className="flex justify-between px-2">{[0, 1, 2, 3].map((i) => <i key={i} className="w-3 h-3 rounded-full bg-slate-200 block" />)}</div>
-      <i className="ml-1.5 mt-1.5 mb-1 w-6 h-1.5 rounded-full bg-red-500 block" />
-      {cards}
-    </div>
-  );
-}
 
 const QUICK_COLORS = [
   { name: 'Cyber Blue', hex: '#0066ff' },
@@ -192,6 +144,29 @@ export default function AdminCustomize() {
   const [copied, setCopied] = useState(false);
 
   const { refreshSettings } = useSettings();
+  const [applying, setApplying] = useState('');
+
+  // Apply a theme right away: saves the theme and its colours (colours can be changed later)
+  const applyTheme = async (t: StoreThemeInfo) => {
+    if (!window.confirm(`"${t.name}" থিম চালু করবেন? সাইটের চেহারা ও রঙ বদলে যাবে।`)) return;
+    setApplying(t.id);
+    try {
+      const values: Record<string, string> = { active_theme: t.id, ...t.colors };
+      const now = new Date().toISOString();
+      const { error } = await supabase.from('settings').upsert(
+        Object.entries(values).map(([key, value]) => ({ key, value, updated_at: now })),
+        { onConflict: 'store_id,key' },
+      );
+      if (error) throw error;
+      setSettings((cur) => ({ ...cur, ...values }));
+      await refreshSettings();
+      toast.success(`${t.name} থিম চালু হয়েছে`);
+    } catch (err: any) {
+      toast.error(err.message || 'থিম চালু করা যায়নি');
+    } finally {
+      setApplying('');
+    }
+  };
   const [settings, setSettings] = useState<ThemeState>(DEFAULT_SETTINGS);
 
   useEffect(() => {
@@ -343,7 +318,7 @@ export default function AdminCustomize() {
       {/* 4 Clean Light Tabs - Highly Responsive & Touch Friendly */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
         {[
-          { id: 'home', label: 'Home Page Design', icon: Smartphone, badge: 'Home' },
+          { id: 'home', label: 'Themes', icon: Smartphone, badge: 'Themes' },
           { id: 'colors', label: 'Branding & Colors', icon: Palette, badge: 'Colors' },
           { id: 'typography', label: 'Typography & Curves', icon: Type, badge: 'Fonts' },
           { id: 'navigation', label: 'Header & Notices', icon: Layout, badge: 'Navbar' },
@@ -368,54 +343,56 @@ export default function AdminCustomize() {
         })}
       </div>
 
-      {/* TAB 0: HOME PAGE DESIGN */}
+      {/* TAB 0: THEMES */}
       {activeTab === 'home' && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 sm:p-8 space-y-6">
             <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
               <div className="p-2.5 bg-blue-50 text-blue-600 rounded-2xl"><Smartphone size={20} /></div>
               <div>
-                <h2 className="text-lg font-black text-slate-900 tracking-tight">হোম পেজ ডিজাইন (Home Page Theme)</h2>
-                <p className="text-xs sm:text-sm text-slate-500">কাস্টমার সাইটে ঢুকে প্রথম যে পেজ দেখে, শুধু সেটার ডিজাইন বদলাবে। প্রোডাক্ট, কার্ট, চেকআউট আগের মতোই থাকবে।</p>
+                <h2 className="text-lg font-black text-slate-900 tracking-tight">থিম (Themes)</h2>
+                <p className="text-xs sm:text-sm text-slate-500">থিম বদলালে সাইটের চেহারা বদলাবে — হোম পেজ, হেডার, নিচের মেনু, ফুটার, প্রোডাক্ট কার্ড। অর্ডার, কার্ট, চেকআউট আগের মতোই কাজ করবে।</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {HOME_DESIGNS.map((d) => {
-                const on = (settings.active_theme || 'default') === d.id;
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {STORE_THEMES.map((t) => {
+                const on = themeIdOf(settings.active_theme) === t.id;
                 return (
-                  <button key={d.id} type="button" onClick={() => setSettings({ ...settings, active_theme: d.id })}
-                    className={`text-left rounded-2xl border-2 p-3 transition-all cursor-pointer ${on ? 'border-primary bg-primary/5 shadow-md shadow-primary/10' : 'border-slate-200 hover:border-slate-300'}`}>
-                    <div className="mx-auto w-28 h-44 rounded-xl border-4 border-slate-800 overflow-hidden bg-slate-50"><DesignPreview id={d.id} /></div>
-                    <div className="mt-3 flex items-center justify-between gap-2">
-                      <p className="font-black text-slate-900">{d.name}</p>
-                      {on && <span className="flex items-center gap-1 text-xs font-bold text-primary"><CheckCircle2 size={15} /> চালু</span>}
+                  <div key={t.id} className={`rounded-2xl border-2 overflow-hidden ${on ? 'border-primary shadow-lg shadow-primary/10' : 'border-slate-200'}`}>
+                    <div className="bg-slate-100 aspect-[4/5] overflow-hidden">
+                      <img src={t.preview} alt={`${t.name} theme`} className="w-full h-full object-cover object-top" loading="lazy" />
                     </div>
-                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">{d.desc}</p>
-                  </button>
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-lg font-black text-slate-900">{t.name}</p>
+                        {on && <span className="flex items-center gap-1 text-xs font-bold text-primary"><CheckCircle2 size={15} /> চালু আছে</span>}
+                      </div>
+                      <p className="text-xs text-slate-500 leading-relaxed">{t.desc}</p>
+                      <p className="text-[11px] text-slate-500">ব্যানার সাইজ: <b>{t.bannerSizes.hero}</b>{t.bannerSizes.middle ? <> · মাঝের ব্যানার: <b>{t.bannerSizes.middle}</b></> : null}</p>
+                      <div className="flex gap-2">
+                        <a href={`/?preview_theme=${t.id}`} target="_blank" rel="noreferrer" className="flex-1 text-center rounded-xl border border-slate-200 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50">Preview</a>
+                        <button type="button" disabled={on || applying !== ''} onClick={() => applyTheme(t)}
+                          className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-bold text-white disabled:opacity-40 cursor-pointer">
+                          {applying === t.id ? 'চালু হচ্ছে…' : on ? 'চালু' : 'Apply'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 );
               })}
             </div>
-            {settings.active_theme !== 'default' && settings.active_theme && (
-              <div className="space-y-4 pt-4 border-t border-slate-100">
-                <p className="text-sm font-bold text-slate-800">উপরের বড় অংশের লেখা ও ছবি (Hero)</p>
-                <label className="block text-xs font-bold text-slate-600">শিরোনাম
-                  <input value={settings.home_hero_title} onChange={(e) => setSettings({ ...settings, home_hero_title: e.target.value })} maxLength={60}
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-primary" />
-                </label>
-                <label className="block text-xs font-bold text-slate-600">ছোট বর্ণনা
-                  <textarea value={settings.home_hero_text} onChange={(e) => setSettings({ ...settings, home_hero_text: e.target.value })} maxLength={160} rows={2}
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-primary" />
-                </label>
-                <label className="block text-xs font-bold text-slate-600">বাটনের লেখা
-                  <input value={settings.home_hero_button} onChange={(e) => setSettings({ ...settings, home_hero_button: e.target.value })} maxLength={24}
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-primary" />
-                </label>
-                <div className="text-xs font-bold text-slate-600">হিরো ছবি <span className="font-medium text-slate-400">(না দিলে প্রথম ব্যানার বা নতুন প্রোডাক্টের ছবি দেখাবে)</span>
-                  <div className="mt-1"><CloudinaryUpload label="" value={settings.home_hero_image} onChange={(url) => setSettings({ ...settings, home_hero_image: url })} /></div>
-                </div>
-              </div>
-            )}
-            <p className="text-xs text-slate-500">বদলানোর পর উপরের <b>Save Changes</b> চাপুন।</p>
+            <div className="rounded-2xl bg-slate-50 p-4 text-xs sm:text-sm text-slate-600 leading-relaxed">
+              <p className="font-bold text-slate-800 mb-1">থিমের লেখা ও ছবি কোথায় বদলাবেন:</p>
+              <ul className="space-y-1 list-disc pl-5">
+                <li>লোগো, ফোন, ইমেইল — <Link className="text-primary font-semibold" to="/admin/settings">Settings</Link></li>
+                <li>বড় ব্যানার ও মাঝের ব্যানার — <Link className="text-primary font-semibold" to="/admin/banners">Banners</Link></li>
+                <li>Free Delivery / COD / Return / Support কার্ড — <Link className="text-primary font-semibold" to="/admin/features">Features</Link></li>
+                <li>ক্যাটাগরির ছবি — <Link className="text-primary font-semibold" to="/admin/categories">Categories</Link></li>
+                <li>রিভিউ — <Link className="text-primary font-semibold" to="/admin/reviews">Reviews</Link> (Approve করা রিভিউ দেখাবে)</li>
+                <li>ফুটারের লিংক — <Link className="text-primary font-semibold" to="/admin/pages">Pages</Link></li>
+              </ul>
+              <p className="mt-2">কিছু না দিলে সেই অংশ ফাঁকা থাকবে বা দেখাবে না।</p>
+            </div>
           </div>
         </motion.div>
       )}

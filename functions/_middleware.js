@@ -11,7 +11,7 @@ export async function onRequest(context) {
   const normalizedPath = url.pathname.replace(/\/+/g, '/');
 
   // The Cloud Commerce landing page and brand files carry their own tags; never add a store's SEO to them
-  if (normalizedPath === '/platform' || normalizedPath.startsWith('/platform/') || normalizedPath.startsWith('/brand/') || normalizedPath.startsWith('/marketing/')) {
+  if (normalizedPath === '/platform' || normalizedPath.startsWith('/platform/') || normalizedPath.startsWith('/brand/') || normalizedPath.startsWith('/marketing/') || normalizedPath.startsWith('/themes/')) {
     return context.next();
   }
 

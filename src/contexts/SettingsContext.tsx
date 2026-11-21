@@ -55,10 +55,10 @@ interface SiteSettings {
   theme_announcement_color?: string;
   theme_announcement_link?: string;
   active_theme?: string;
-  home_hero_title?: string;
-  home_hero_text?: string;
-  home_hero_button?: string;
-  home_hero_image?: string;
+  store_phone?: string;
+  copyright_text?: string;
+  site_title?: string;
+  store_email?: string;
   telegram_bot_token?: string;
   telegram_chat_id?: string;
   telegram_notifications_enabled?: string;
