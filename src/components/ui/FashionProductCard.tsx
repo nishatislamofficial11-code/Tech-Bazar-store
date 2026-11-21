@@ -53,7 +53,7 @@ export function FashionProductCard({ product }: { product: FashionCardProduct })
         {badge && <span className="absolute top-3 left-3 rounded-md bg-primary px-2.5 py-1 text-[12px] sm:text-[13px] font-semibold text-white">{badge}</span>}
         {off > 0 && <span className="absolute top-3 right-3 rounded-md bg-rose-600 px-2 py-1 text-[12px] sm:text-[13px] font-bold text-white">-{off}%</span>}
       </Link>
-      <Link to={url} className="mt-3 block text-[15px] sm:text-base font-medium text-slate-900 leading-snug line-clamp-2 hover:text-primary">{product.title}</Link>
+      <Link to={url} className="mt-3 text-[15px] sm:text-base font-medium text-slate-900 leading-snug line-clamp-2 min-h-[2.75em] hover:text-primary">{product.title}</Link>
       {product.rating ? (
         <p className="mt-1.5 flex items-center gap-1.5 text-[13px] text-slate-500">
           <Star size={15} className="fill-amber-400 text-amber-400" /> {product.rating.toFixed(1)} <span className="text-slate-400">({product.reviews || 0})</span>
