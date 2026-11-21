@@ -20,6 +20,7 @@ import { buildCloudinaryUrl } from '../../lib/cloudinary';
 import { getCachedData, setCachedData } from '../../lib/cache';
 import { isBot } from '../../lib/isBot';
 import { FashionProductCard } from '../ui/FashionProductCard';
+import { useReveal } from '../ui/useReveal';
 import { useBanners, useFeaturedCategories, useStoreFeatures, categoryPath, HomeBanner } from './useHomeData';
 
 const PAGE = 8;
@@ -61,6 +62,12 @@ function Heading({ title, subtitle, onPrev, onNext, viewAll }: { title: string; 
     </div>
   );
 }
+
+/** Wrapper that fades its content up the first time it scrolls into view */
+const Reveal: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => {
+  const r = useReveal();
+  return <div ref={r.ref} className={`${className} ${r.className}`}>{children}</div>;
+};
 
 const AUTO_SLIDE_MS = 1500;
 
@@ -190,13 +197,13 @@ export default function FashionHome() {
           {features.slice(0, 4).map((f, i) => {
             const Icon = FEATURE_ICONS[f.icon] || HelpCircle;
             return (
-              <div key={i} className="flex items-center gap-4 rounded-2xl bg-slate-50 px-4 py-5 sm:px-6 sm:py-7">
+              <Reveal key={i} className="flex items-center gap-4 rounded-2xl bg-slate-50 px-4 py-5 sm:px-6 sm:py-7">
                 <Icon className="shrink-0 text-primary w-7 h-7 sm:w-8 sm:h-8" strokeWidth={1.8} />
                 <div className="min-w-0">
                   <p className="font-bold text-[16px] sm:text-lg text-slate-900 leading-tight">{f.title}</p>
                   {f.desc && <p className="mt-0.5 text-[14px] sm:text-base text-slate-500 leading-snug">{f.desc}</p>}
                 </div>
-              </div>
+              </Reveal>
             );
           })}
         </section>
@@ -207,14 +214,14 @@ export default function FashionHome() {
           <Heading title="Categories" viewAll="/shop" />
           <div className="grid grid-cols-3 md:grid-cols-6 gap-4 sm:gap-6">
             {(catLoading && !categories.length ? Array.from({ length: 6 }) : categories.slice(0, 6)).map((c: any, i) => c ? (
-              <Link key={c.id} to={categoryPath(c.name)} className="group text-center">
+              <Reveal key={c.id}><Link to={categoryPath(c.name)} className="group block text-center">
                 <div className="aspect-square rounded-2xl overflow-hidden bg-slate-100">
                   {c.image_url
                     ? <img src={buildCloudinaryUrl(c.image_url, 'w_400,h_400,c_fill,f_auto,q_auto')} alt={c.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     : <div className="w-full h-full flex items-center justify-center text-3xl font-black text-primary/50">{String(c.name).charAt(0)}</div>}
                 </div>
                 <p className="mt-3 text-base sm:text-lg text-slate-900 truncate">{c.name}</p>
-              </Link>
+              </Link></Reveal>
             ) : <div key={i} className="aspect-square rounded-2xl skeleton-shimmer" />)}
           </div>
         </section>
@@ -244,7 +251,7 @@ export default function FashionHome() {
 
       <Carousel title="Customer Reviews" subtitle="What our customers are saying" items={shownReviews} itemClass="w-[80%] sm:w-[45%] lg:w-[32%]"
         render={(r: any) => (
-          <div className="h-full rounded-3xl border border-slate-200 bg-slate-50 p-6 sm:p-7">
+          <Reveal className="h-full rounded-3xl border border-slate-200 bg-slate-50 p-6 sm:p-7">
             <div className="flex gap-1">{[1, 2, 3, 4, 5].map((n) => <Star key={n} size={22} className={n <= r.rating ? 'fill-amber-400 text-amber-400' : 'fill-slate-200 text-slate-200'} />)}</div>
             <p className="mt-4 text-[17px] leading-relaxed text-slate-800 line-clamp-4">"{r.content}"</p>
             <div className="mt-5 flex items-center gap-3">
@@ -254,7 +261,7 @@ export default function FashionHome() {
                 <p className="text-sm text-slate-500">{timeAgo(r.created_at)} · <span className="text-emerald-600">Verified</span></p>
               </div>
             </div>
-          </div>
+          </Reveal>
         )} />
     </div>
   );
