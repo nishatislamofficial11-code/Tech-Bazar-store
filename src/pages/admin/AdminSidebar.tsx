@@ -38,6 +38,7 @@ export interface NavItemDef {
 
 export const NAV_ITEMS: NavItemDef[] = [
   { name: 'Dashboard', path: '/admin', icon: PieChart },
+  { section: 'Shop & Growth', name: 'Theme & Design', path: '/admin/customize', icon: Paintbrush, adminOnly: true },
   { section: 'Shop & Growth', name: 'Analytics', path: '/admin/analytics', icon: Activity, adminOnly: true },
   { section: 'Shop & Growth', name: 'Visitors', path: '/admin/visitor-analytics', icon: Globe, adminOnly: true },
   { name: 'Orders', path: '/admin/orders', icon: Inbox, badgeKey: 'pendingOrders' },
@@ -77,7 +78,6 @@ export const NAV_ITEMS: NavItemDef[] = [
   { section: 'AI Automation', name: 'Knowledge Base', path: '/admin/ai/knowledge', icon: BookOpen },
   { section: 'AI Automation', name: 'AI Settings', path: '/admin/ai/settings', icon: Bot },
   { section: 'AI Automation', name: 'Connections', path: '/admin/ai/connections', icon: Plug, adminOnly: true },
-  { section: 'Shop & Growth', name: 'Appearance', path: '/admin/customize', icon: Paintbrush, adminOnly: true },
   { section: 'Shop & Growth', name: 'SEO', path: '/admin/seo', icon: SearchCheck, adminOnly: true },
 ];
 
