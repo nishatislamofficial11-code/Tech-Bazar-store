@@ -29,7 +29,7 @@ create policy shop_read on public.sms_transactions for select to authenticated
 revoke all on public.sms_wallets, public.sms_transactions from anon, authenticated;
 grant select on public.sms_wallets, public.sms_transactions to authenticated;
 
-insert into public.platform_settings (key, value) values ('sms_price', '0.50') on conflict (key) do nothing;
+insert into public.platform_settings (key, value) values ('sms_packages', '[{"price":100,"sms":200},{"price":200,"sms":400},{"price":250,"sms":500},{"price":500,"sms":1000}]') on conflict (key) do nothing;
 
 -- Server only: take SMS credits before sending (false when the balance is too low)
 create or replace function public.sms_use(p_store uuid, p_count int, p_reason text)

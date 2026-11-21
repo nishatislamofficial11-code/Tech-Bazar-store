@@ -4,6 +4,7 @@ import { MessageSquareText, Send, ShoppingCart, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { currentStoreSlug } from '../../lib/currentStore';
 import { useSettings } from '../../contexts/SettingsContext';
+import { parseSmsPackages, DEFAULT_SMS_PACKAGES, SmsPackage } from '../../lib/smsPackages';
 
 const DEFAULTS = {
   placed: '{shop}: প্রিয় {name}, আপনার অর্ডার #{order} পেয়েছি। মোট ৳{total}। ধন্যবাদ!',
@@ -22,11 +23,11 @@ export default function CustomerSms() {
   const { settings, refreshSettings } = useSettings();
   const s = settings as Record<string, string | undefined>;
   const [balance, setBalance] = useState<number | null>(null);
-  const [price, setPrice] = useState(0.5);
+  const [packages, setPackages] = useState<SmsPackage[]>(DEFAULT_SMS_PACKAGES);
   const [history, setHistory] = useState<{ id: number; change: number; amount_tk: number | null; reason: string; created_at: string }[]>([]);
   const [contact, setContact] = useState<{ phone?: string; whatsapp?: string }>({});
   const [buyOpen, setBuyOpen] = useState(false);
-  const [buyTk, setBuyTk] = useState('500');
+  const [chosen, setChosen] = useState<SmsPackage | null>(null);
   const [onPlaced, setOnPlaced] = useState(false);
   const [onShipped, setOnShipped] = useState(false);
   const [textPlaced, setTextPlaced] = useState(DEFAULTS.placed);
@@ -39,12 +40,12 @@ export default function CustomerSms() {
     const [w, h, ps] = await Promise.all([
       supabase.from('sms_wallets').select('balance').maybeSingle(),
       supabase.from('sms_transactions').select('id, change, amount_tk, reason, created_at').order('created_at', { ascending: false }).limit(20),
-      supabase.from('platform_settings').select('key, value').in('key', ['sms_price', 'contact_phone', 'contact_whatsapp']),
+      supabase.from('platform_settings').select('key, value').in('key', ['sms_packages', 'contact_phone', 'contact_whatsapp']),
     ]);
     setBalance(w.data?.balance ?? 0);
     setHistory((h.data || []) as typeof history);
     const m = Object.fromEntries(((ps.data || []) as { key: string; value: string }[]).map((r) => [r.key, r.value]));
-    if (Number(m.sms_price) > 0) setPrice(Number(m.sms_price));
+    setPackages(parseSmsPackages(m.sms_packages));
     setContact({ phone: m.contact_phone, whatsapp: m.contact_whatsapp });
   };
   useEffect(() => { loadWallet(); }, []);
@@ -117,7 +118,7 @@ export default function CustomerSms() {
       <div className="rounded-2xl p-5 text-white bg-gradient-to-br from-primary to-indigo-700 shadow-sm">
         <p className="text-sm opacity-80">আপনার SMS ব্যালান্স</p>
         <p className="mt-1 text-4xl font-black">{balance === null ? '…' : balance.toLocaleString('en-US')} <span className="text-base font-semibold opacity-80">SMS</span></p>
-        <p className="mt-1 text-xs opacity-80">প্রতি SMS ৳{price.toFixed(2)} · বাংলা SMS-এ ৭০ অক্ষর = ১টা SMS</p>
+        <p className="mt-1 text-xs opacity-80">বাংলা SMS-এ ৭০ অক্ষর = ১টা SMS</p>
         <button onClick={() => setBuyOpen(true)} className="mt-4 flex items-center gap-2 bg-white text-primary font-bold text-sm px-4 py-2 rounded-xl">
           <ShoppingCart className="h-4 w-4" />SMS কিনুন
         </button>
@@ -164,22 +165,26 @@ export default function CustomerSms() {
               <h2 className="font-bold text-lg">SMS কিনুন</h2>
               <button onClick={() => setBuyOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100" aria-label="বন্ধ"><X className="h-5 w-5" /></button>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              {['200', '500', '1000'].map((v) => (
-                <button key={v} onClick={() => setBuyTk(v)} className={`rounded-xl border py-2 text-sm font-bold ${buyTk === v ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 text-gray-700'}`}>৳{v}</button>
+            <p className="text-xs text-gray-500">একটা প্যাকেজ বেছে নিন। কেনার সাথে সাথে SMS আপনার ব্যালান্সে যোগ হবে।</p>
+            <div className="grid grid-cols-2 gap-2">
+              {packages.map((p) => (
+                <button key={`${p.price}-${p.sms}`} onClick={() => setChosen(p)}
+                  className={`rounded-2xl border p-3 text-left transition ${chosen === p ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <span className="block text-xl font-black text-gray-900">{p.sms.toLocaleString('en-US')}</span>
+                  <span className="block text-xs text-gray-500">SMS</span>
+                  <span className="mt-1 block text-sm font-bold text-primary">৳{p.price.toLocaleString('en-US')}</span>
+                </button>
               ))}
             </div>
-            <label className="block text-xs font-bold text-gray-600">টাকার পরিমাণ
-              <input type="number" min={50} value={buyTk} onChange={(e) => setBuyTk(e.target.value)} className={input} />
-            </label>
-            <p className="text-sm text-gray-700">আপনি পাবেন <b>{Math.floor((Number(buyTk) || 0) / price).toLocaleString('en-US')}টা SMS</b></p>
             <div className="rounded-xl bg-amber-50 text-amber-800 text-xs p-3">
-              অনলাইনে (বিকাশ/কার্ড) সরাসরি কেনার ব্যবস্থা খুব শীঘ্রই চালু হচ্ছে। এখন কিনতে আমাদের সাথে যোগাযোগ করুন, টাকা পাঠালে সাথে সাথে ব্যালান্স যোগ হয়ে যাবে।
+              অনলাইনে (বিকাশ/কার্ড) পেমেন্ট খুব শীঘ্রই চালু হচ্ছে। এখন কিনতে প্যাকেজের নাম জানিয়ে আমাদের সাথে যোগাযোগ করুন, পেমেন্টের পর সাথে সাথে SMS যোগ হয়ে যাবে।
               {(contact.whatsapp || contact.phone) && (
                 <span className="block mt-1 font-bold">{contact.whatsapp ? `WhatsApp: ${contact.whatsapp}` : ''}{contact.whatsapp && contact.phone ? ' · ' : ''}{contact.phone ? `ফোন: ${contact.phone}` : ''}</span>
               )}
             </div>
-            <button disabled className="w-full bg-gray-200 text-gray-500 font-bold py-2.5 rounded-xl cursor-not-allowed">অনলাইনে পেমেন্ট (শীঘ্রই)</button>
+            <button disabled className="w-full bg-gray-200 text-gray-500 font-bold py-2.5 rounded-xl cursor-not-allowed">
+              {chosen ? `৳${chosen.price} পেমেন্ট করুন (শীঘ্রই)` : 'প্যাকেজ বেছে নিন'}
+            </button>
           </div>
         </div>
       )}
