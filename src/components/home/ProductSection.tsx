@@ -7,6 +7,8 @@ interface ProductSectionProps {
   title?: string;
   badge?: React.ReactNode;
   actionText?: string;
+  /** Where "View All" goes (default: the shop page) */
+  actionLink?: string;
   products: any[];
   showRating?: boolean;
   isLoading?: boolean;
@@ -16,6 +18,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
   title, 
   badge,
   actionText = 'View All \u2192', 
+  actionLink = '/shop',
   products,
   showRating = false,
   isLoading = false
@@ -68,7 +71,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
              )}
           </div>
           <Link 
-            to="/shop" 
+            to={actionLink} 
             aria-label={`View all ${title || 'products'}`}
             className="text-[13px] sm:text-sm font-bold text-primary hover:text-primary-hover transition-colors flex items-center gap-1 group"
           >

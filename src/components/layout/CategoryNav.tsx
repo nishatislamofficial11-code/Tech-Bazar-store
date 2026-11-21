@@ -11,6 +11,7 @@ export const CategoryNav = () => {
         .from('categories')
         .select('*')
         .eq('is_featured', true)
+        .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false })
         .limit(10);
       if (data) setCategories(data);

@@ -69,7 +69,7 @@ export default function Shop() {
       setLoading(true);
       const [productsRes, categoriesRes] = await Promise.all([
         supabase.from('products').select('*').order('created_at', { ascending: false }),
-        supabase.from('categories').select('*').order('name')
+        supabase.from('categories').select('*').order('sort_order', { ascending: true }).order('name')
       ]);
         
       if (productsRes.data) setProducts(productsRes.data);

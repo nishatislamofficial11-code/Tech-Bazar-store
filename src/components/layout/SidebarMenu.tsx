@@ -26,7 +26,7 @@ export const SidebarMenu: React.FC<SidebarMenuProps> = ({ isOpen, onClose, initi
 
   useEffect(() => {
     const fetchCategories = async () => {
-      const { data } = await supabase.from('categories').select('id, name').order('name');
+      const { data } = await supabase.from('categories').select('id, name').order('sort_order', { ascending: true }).order('name');
       if (data) {
         setCategories(data);
       }

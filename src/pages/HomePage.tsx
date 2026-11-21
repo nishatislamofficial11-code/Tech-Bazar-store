@@ -13,6 +13,7 @@ import { useStoreTheme } from '../lib/storeTheme';
 
 const CategoryGrid = lazy(() => import('../components/home/CategoryGrid').then(m => ({ default: m.CategoryGrid })));
 const ProductSection = lazy(() => import('../components/home/ProductSection').then(m => ({ default: m.ProductSection })));
+const CategoryProductSections = lazy(() => import('../components/home/CategoryProductSections').then(m => ({ default: m.CategoryProductSections })));
 const FeaturesSection = lazy(() => import('../components/home/FeaturesSection').then(m => ({ default: m.FeaturesSection })));
 // Fashion theme home page (Admin → Theme & Design)
 const FashionHome = lazy(() => import('../components/home/FashionHome'));
@@ -211,6 +212,8 @@ export default function HomePage() {
           products={bestDealProducts.length > 0 ? bestDealProducts : (loadingProducts ? placeholderProducts : [])}
           isLoading={loadingProducts && bestDealProducts.length === 0}
         />
+
+        <CategoryProductSections />
       </Suspense>
       </>)}
     </main>
