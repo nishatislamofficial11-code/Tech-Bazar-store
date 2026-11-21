@@ -144,7 +144,7 @@ export default function AdminCustomize() {
   const [jsonConfigInput, setJsonConfigInput] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const { refreshSettings } = useSettings();
+  const { refreshSettings, settings: liveSettings } = useSettings();
   const [applying, setApplying] = useState('');
 
   // Apply a theme right away: saves the theme and its colours (colours can be changed later)
@@ -152,14 +152,23 @@ export default function AdminCustomize() {
     if (!window.confirm(`"${t.name}" থিম চালু করবেন? সাইটের চেহারা ও রঙ বদলে যাবে।`)) return;
     setApplying(t.id);
     try {
-      const values: Record<string, string> = { active_theme: t.id, ...t.colors };
+      // Remember this theme's colours, and bring back the target theme's colours from last time
+      const current = themeIdOf(settings.active_theme);
+      const keys = Object.keys(t.colors);
+      const saved: Record<string, string> = Object.fromEntries(keys.map((k) => [k, String((settings as any)[k] ?? (liveSettings as any)[k] ?? '')]));
+      let target: Record<string, string> = t.colors;
+      try {
+        const prev = JSON.parse((liveSettings as any)[`theme_colors_${t.id}`] || 'null');
+        if (prev && typeof prev === 'object') target = { ...t.colors, ...prev };
+      } catch { /* use theme defaults */ }
+      const values: Record<string, string> = { active_theme: t.id, ...target, [`theme_colors_${current}`]: JSON.stringify(saved) };
       const now = new Date().toISOString();
       const { error } = await supabase.from('settings').upsert(
         Object.entries(values).map(([key, value]) => ({ key, value, updated_at: now })),
         { onConflict: 'store_id,key' },
       );
       if (error) throw error;
-      setSettings((cur) => ({ ...cur, ...values }));
+      setSettings((cur) => ({ ...cur, active_theme: t.id, ...target }));
       await refreshSettings();
       toast.success(`${t.name} থিম চালু হয়েছে`);
     } catch (err: any) {
