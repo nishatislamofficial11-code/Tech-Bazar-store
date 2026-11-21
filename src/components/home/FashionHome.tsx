@@ -68,7 +68,7 @@ const AUTO_SLIDE_MS = 1500;
 function Carousel({ title, subtitle, items, render, itemClass }: { title: string; subtitle?: string; items: any[]; render: (x: any) => React.ReactNode; itemClass: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const pausedUntil = useRef(0);
-  const pause = () => { pausedUntil.current = Date.now() + 5000; };
+  const pause = () => { pausedUntil.current = Date.now() + 3000; };
   const step = () => {
     const el = ref.current;
     const card = el?.firstElementChild as HTMLElement | null;
