@@ -13,6 +13,10 @@ import { trackPurchase, saveCachedUserData } from '../lib/fbPixel';
 const CategoryGrid = lazy(() => import('../components/home/CategoryGrid').then(m => ({ default: m.CategoryGrid })));
 const ProductSection = lazy(() => import('../components/home/ProductSection').then(m => ({ default: m.ProductSection })));
 const FeaturesSection = lazy(() => import('../components/home/FeaturesSection').then(m => ({ default: m.FeaturesSection })));
+// Other home page designs (Admin → Customize → Home Page). Every other page stays the same.
+const BoutiqueHome = lazy(() => import('../components/home/themes/BoutiqueHome'));
+const BoldHome = lazy(() => import('../components/home/themes/BoldHome'));
+export const HOME_DESIGNS = ['default', 'boutique', 'bold'] as const;
 
 
 const HomeSectionsFallback = () => (
@@ -61,6 +65,22 @@ export default function HomePage() {
     return Array.isArray(cached) ? cached : [];
   });
   const [loadingProducts, setLoadingProducts] = useState(flashSaleProducts.length === 0 && bestDealProducts.length === 0);
+  const design = (HOME_DESIGNS as readonly string[]).includes(settings?.active_theme || '') ? settings.active_theme! : 'default';
+  const [latestProducts, setLatestProducts] = useState<any[]>(() => {
+    const cached = getCachedData('latest_products_cache');
+    return Array.isArray(cached) ? cached : [];
+  });
+
+  // The newer designs also show the latest products
+  useEffect(() => {
+    if (design === 'default') return;
+    supabase.from('products').select('*').order('created_at', { ascending: false }).limit(8).then(({ data }) => {
+      if (data) {
+        setLatestProducts(data);
+        setCachedData('latest_products_cache', data, 15);
+      }
+    });
+  }, [design]);
 
   // Show payment outcome after gateway redirect (?payment=success|failed|cancelled)
   useEffect(() => {
@@ -186,6 +206,24 @@ export default function HomePage() {
         ogTitle={settings?.ogTitle}
         ogDescription={settings?.ogDescription}
       />
+      {design !== 'default' ? (
+        <Suspense fallback={<HomeSectionsFallback />}>
+          {(() => {
+            const Design = design === 'bold' ? BoldHome : BoutiqueHome;
+            return (
+              <Design
+                products={{ latest: latestProducts, flash: flashSaleProducts, best: bestDealProducts, loading: loadingProducts && latestProducts.length === 0 }}
+                hero={{
+                  title: settings?.home_hero_title?.trim() || 'নতুন কালেকশন এসে গেছে',
+                  text: settings?.home_hero_text?.trim() ?? 'সেরা মানের পণ্য, সারা বাংলাদেশে ক্যাশ অন ডেলিভারি।',
+                  button: settings?.home_hero_button?.trim() || 'এখনই কিনুন',
+                  image: settings?.home_hero_image?.trim() || '',
+                }}
+              />
+            );
+          })()}
+        </Suspense>
+      ) : (<>
       <HeroBanner />
       <Suspense fallback={<HomeSectionsFallback />}>
         <CategoryGrid />
@@ -204,6 +242,7 @@ export default function HomePage() {
           isLoading={loadingProducts && bestDealProducts.length === 0}
         />
       </Suspense>
+      </>)}
     </main>
   );
 }
