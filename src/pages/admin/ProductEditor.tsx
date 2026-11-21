@@ -2,6 +2,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useStoreTheme } from '../../lib/storeTheme';
+import { ThemeHint } from '../../components/admin/ThemeHint';
+import { FashionProductCard, BADGE_LABELS } from '../../components/ui/FashionProductCard';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -84,6 +87,7 @@ interface Product {
   category_id?: string;
   is_flash_sale?: boolean;
   is_best_deal?: boolean;
+  badge?: string;
   is_delivery_free?: boolean;
   delivery_charge?: number | null;
   variants?: Variant[];
@@ -115,6 +119,7 @@ export default function AdminProductEditor() {
 
   // Active tabs / view modes
   const { settings } = useSettings();
+  const isFashion = useStoreTheme() === 'fashion';
   const [descViewMode, setDescViewMode] = useState<'visual' | 'html' | 'preview'>('visual');
   const [newImageUrl, setNewImageUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -146,6 +151,7 @@ export default function AdminProductEditor() {
     category_id: '',
     is_flash_sale: false,
     is_best_deal: false,
+    badge: '',
     is_delivery_free: false,
     delivery_charge: 0,
     variants: [] as Variant[],
@@ -243,6 +249,7 @@ export default function AdminProductEditor() {
             category_id: data.category_id || '',
             is_flash_sale: Boolean(data.is_flash_sale),
             is_best_deal: Boolean(data.is_best_deal),
+            badge: data.badge || '',
             is_delivery_free: Boolean(data.is_delivery_free),
             delivery_charge: Number(data.delivery_charge || 0),
             variants: normalizeVariants(data.variants || [], data),
@@ -834,6 +841,7 @@ export default function AdminProductEditor() {
         slug: (formData.slug || '').trim() || slugify(formData.title || ''),
         is_flash_sale: Boolean(formData.is_flash_sale),
         is_best_deal: Boolean(formData.is_best_deal),
+        badge: formData.badge || null,
         is_delivery_free: Boolean(formData.is_delivery_free),
         delivery_charge: formData.is_delivery_free ? null : Number(formData.delivery_charge || 0),
         variants: normalizedVariants,
@@ -1170,6 +1178,10 @@ export default function AdminProductEditor() {
                   <p className="text-xs text-slate-500 font-medium mt-0.5">
                     Upload or link high-resolution product photos. First image is the primary cover.
                   </p>
+                  <ThemeHint className="mt-2" text={{
+                    classic: <>প্রোডাক্টের ছবি <b>বর্গাকার (1:1)</b> দিন, যেমন <b>1000 × 1000 px</b>।</>,
+                    fashion: <>প্রোডাক্টের ছবি <b>লম্বা (3:4)</b> দিন, যেমন <b>900 × 1200 px</b>। বর্গাকার ছবি দিলে দুই পাশ একটু কেটে দেখাবে।</>,
+                  }} />
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -2004,6 +2016,10 @@ export default function AdminProductEditor() {
               {/* Badges & Flags */}
               <div className="pt-2 space-y-2.5">
                 <label className="text-xs font-bold text-slate-700">Promotions & Badges</label>
+                <ThemeHint text={{
+                  classic: <>Flash Sale চালু করলে হোম পেজের <b>Flash Sale</b> সেকশনে, Best Deal চালু করলে <b>Best Deals</b> সেকশনে দেখাবে।</>,
+                  fashion: <>নতুন প্রোডাক্ট নিজে থেকেই <b>New Arrivals</b>-এ আসে। <b>Best Sellers</b>-এ দেখাতে নিচের দ্বিতীয়টা চালু করুন।</>,
+                }} />
 
                 <label className="flex items-center justify-between p-3 rounded-xl border border-orange-200/80 bg-orange-50/50 hover:bg-orange-50 cursor-pointer transition-colors">
                   <div className="flex items-center gap-2.5">
@@ -2011,8 +2027,8 @@ export default function AdminProductEditor() {
                       <Flame className="w-4 h-4" />
                     </div>
                     <div>
-                      <span className="block text-xs font-bold text-slate-900">Flash Sale Highlight</span>
-                      <span className="block text-[10px] text-slate-500">Feature in countdown section</span>
+                      <span className="block text-xs font-bold text-slate-900">{isFashion ? 'সেল (Flash Sale)' : 'Flash Sale Highlight'}</span>
+                      <span className="block text-[10px] text-slate-500">{isFashion ? "কার্ডে 'সেল' ব্যাজ, প্রোডাক্ট পেজে কাউন্টডাউন" : 'Feature in countdown section'}</span>
                     </div>
                   </div>
                   <input
@@ -2044,8 +2060,8 @@ export default function AdminProductEditor() {
                       <Star className="w-4 h-4" />
                     </div>
                     <div>
-                      <span className="block text-xs font-bold text-slate-900">Best Deal Badge</span>
-                      <span className="block text-[10px] text-slate-500">Show exclusive deal badge</span>
+                      <span className="block text-xs font-bold text-slate-900">{isFashion ? 'Best Sellers-এ দেখান' : 'Best Deal Badge'}</span>
+                      <span className="block text-[10px] text-slate-500">{isFashion ? "হোম পেজের Best Sellers সেকশনে দেখাবে, কার্ডে 'হট' ব্যাজ" : 'Show exclusive deal badge'}</span>
                     </div>
                   </div>
                   <input
@@ -2056,6 +2072,18 @@ export default function AdminProductEditor() {
                     className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500"
                   />
                 </label>
+
+                {isFashion && (
+                  <div className="p-3 rounded-xl border border-slate-200 bg-white">
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">কার্ডের ব্যাজ</label>
+                    <select name="badge" value={formData.badge || ''} onChange={handleInputChange}
+                      className="w-full text-sm rounded-lg border border-slate-200 px-3 py-2 focus:border-primary outline-none">
+                      <option value="">অটো (নিজে থেকে)</option>
+                      {Object.entries(BADGE_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+                      <option value="none">কোনো ব্যাজ না</option>
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -2069,6 +2097,18 @@ export default function AdminProductEditor() {
               </div>
 
               {/* Rendered Mock Product Card */}
+              {isFashion ? (
+                <div className="bg-white p-3 rounded-xl border border-slate-200/60">
+                  <div className="max-w-[220px] mx-auto pointer-events-none">
+                    <FashionProductCard product={{
+                      id: 'preview', title: formData.title || 'Product Title', image: formData.image || '',
+                      price: Number(formData.price || 0), original_price: Number(formData.original_price || 0),
+                      is_flash_sale: Boolean(formData.is_flash_sale), is_best_deal: Boolean(formData.is_best_deal),
+                      badge: formData.badge || null, created_at: isEditMode ? undefined : new Date().toISOString(),
+                    }} />
+                  </div>
+                </div>
+              ) : (
               <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-200/60">
                 <div className="bg-white rounded-xl overflow-hidden shadow-md border border-slate-100 flex flex-col">
                   {/* Card Image */}
@@ -2135,6 +2175,7 @@ export default function AdminProductEditor() {
                   </div>
                 </div>
               </div>
+              )}
             </div>
 
             {/* CARD 3: GOOGLE SEARCH & SEO STUDIO (PRO RANK ENGINE) */}

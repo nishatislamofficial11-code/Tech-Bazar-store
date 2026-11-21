@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ThemeHint } from '../../components/admin/ThemeHint';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
@@ -192,6 +193,10 @@ export default function AdminCategories() {
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                     </div>
+                    <ThemeHint text={{
+                        classic: <>হোম পেজে গোল আইকনে দেখায়। ছবি বর্গাকার দিন, যেমন <b>300 × 300 px</b>।</>,
+                        fashion: <>হোম পেজে ৩ কলামে বড় ছবিতে দেখায় (Featured চালু থাকা প্রথম ৬টা)। ছবি বর্গাকার দিন, যেমন <b>600 × 600 px</b>।</>,
+                    }} />
                     <CloudinaryUpload 
                         label="Image URL"
                         value={formData.image_url} 

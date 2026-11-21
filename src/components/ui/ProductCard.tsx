@@ -8,6 +8,8 @@ import { CheckoutPopup } from './CheckoutPopup';
 import { buildCloudinaryUrl } from '../../lib/cloudinary';
 import { trackEvent } from '../../lib/analytics';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useStoreTheme } from '../../lib/storeTheme';
+import { FashionProductCard } from './FashionProductCard';
 
 interface ProductCardProps {
   product: {
@@ -27,7 +29,13 @@ interface ProductCardProps {
   showRating?: boolean;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product, showRating = false }) => {
+/** Product card; its look follows the store theme. */
+export const ProductCard: React.FC<ProductCardProps> = (props) => {
+  const theme = useStoreTheme();
+  return theme === 'fashion' ? <FashionProductCard product={props.product as any} /> : <ClassicProductCard {...props} />;
+};
+
+const ClassicProductCard: React.FC<ProductCardProps> = ({ product, showRating = false }) => {
   const [isCheckoutPopupOpen, setIsCheckoutPopupOpen] = React.useState(false);
   const op = product.original_price || product.originalPrice || 0;
   const { addToCart, setIsCartOpen } = useCart();

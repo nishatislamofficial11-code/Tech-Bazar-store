@@ -8,13 +8,14 @@ import { supabase } from '../../lib/supabase';
 interface SidebarMenuProps {
   isOpen: boolean;
   onClose: () => void;
+  initialTab?: 'categories' | 'menu';
 }
 
-export const SidebarMenu: React.FC<SidebarMenuProps> = ({ isOpen, onClose }) => {
+export const SidebarMenu: React.FC<SidebarMenuProps> = ({ isOpen, onClose, initialTab = 'menu' }) => {
   const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const { settings } = useSettings();
-  const [activeTab, setActiveTab] = useState<'categories' | 'menu'>('menu');
+  const [activeTab, setActiveTab] = useState<'categories' | 'menu'>(initialTab);
   const [categories, setCategories] = useState<any[]>([]);
 
   useEffect(() => {

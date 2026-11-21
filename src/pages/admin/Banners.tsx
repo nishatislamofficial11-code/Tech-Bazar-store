@@ -6,6 +6,8 @@ import { AdminPageSkeleton } from '../../components/ui/AdminPageSkeleton';
 import { Modal } from '../../components/ui/Modal';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { CloudinaryUpload } from '../../components/CloudinaryUpload';
+import { useSettings } from '../../contexts/SettingsContext';
+import { STORE_THEMES, themeIdOf } from '../../lib/storeTheme';
 
 interface Banner {
   id: string;
@@ -13,6 +15,7 @@ interface Banner {
   link_url: string;
   is_active: boolean;
   created_at: string;
+  placement?: string | null;
 }
 
 export default function AdminBanners() {
@@ -21,8 +24,10 @@ export default function AdminBanners() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
   const [bannerToDelete, setBannerToDelete] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ image_url: '', link_url: '', is_active: true });
+  const [formData, setFormData] = useState({ image_url: '', link_url: '', is_active: true, placement: 'hero' });
   const [submitting, setSubmitting] = useState(false);
+  const { settings } = useSettings();
+  const theme = STORE_THEMES.find((t) => t.id === themeIdOf(settings?.active_theme))!;
 
   useEffect(() => {
     fetchBanners();
@@ -58,7 +63,8 @@ export default function AdminBanners() {
       fetchBanners();
     } catch (error) {
       console.error('Error saving banner:', error);
-      toast.error('Failed to save banner');
+      const msg = String((error as any)?.message || '');
+      toast.error(msg.includes('placement') ? 'ডাটাবেস আপডেট লাগবে (banners.placement)। SQL চালিয়ে আবার চেষ্টা করুন।' : 'Failed to save banner');
     } finally {
       setSubmitting(false);
     }
@@ -85,10 +91,10 @@ export default function AdminBanners() {
   const openModal = (banner?: Banner) => {
     if (banner) {
       setEditingBanner(banner);
-      setFormData({ image_url: banner.image_url || '', link_url: banner.link_url || '', is_active: banner.is_active });
+      setFormData({ image_url: banner.image_url || '', link_url: banner.link_url || '', is_active: banner.is_active, placement: banner.placement || 'hero' });
     } else {
       setEditingBanner(null);
-      setFormData({ image_url: '', link_url: '', is_active: true });
+      setFormData({ image_url: '', link_url: '', is_active: true, placement: 'hero' });
     }
     setIsModalOpen(true);
   };
@@ -121,6 +127,9 @@ export default function AdminBanners() {
                 <img src={banner.image_url} alt="Banner" className="w-full h-full object-cover" />
               ) : (
                 <ImageIcon className="text-gray-400 w-10 h-10" />
+              )}
+              {banner.placement === 'middle' && (
+                <span className="absolute top-2 left-2 bg-white/90 text-gray-800 px-2.5 py-1 rounded-full text-[11px] font-bold">মাঝের ব্যানার</span>
               )}
               {!banner.is_active && (
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -158,6 +167,22 @@ export default function AdminBanners() {
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingBanner ? 'Edit Banner' : 'Add Banner'} maxWidth="max-w-md">
             <form onSubmit={handleSubmit} className="space-y-4">
+              {theme.bannerSizes.middle && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">কোথায় দেখাবে</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[{ id: 'hero', label: 'উপরের বড় ব্যানার' }, { id: 'middle', label: 'মাঝের ব্যানার' }].map((o) => (
+                      <button key={o.id} type="button" onClick={() => setFormData({ ...formData, placement: o.id })}
+                        className={`rounded-lg border px-3 py-2 text-sm font-medium ${formData.placement === o.id ? 'border-primary bg-primary/5 text-primary' : 'border-gray-300 text-gray-700'}`}>
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+                {theme.name} থিমের জন্য ছবির সাইজ: <b>{formData.placement === 'middle' && theme.bannerSizes.middle ? theme.bannerSizes.middle : theme.bannerSizes.hero}</b>
+              </p>
               <CloudinaryUpload 
                 label="Image URL"
                 value={formData.image_url}

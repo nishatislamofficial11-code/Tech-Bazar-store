@@ -58,6 +58,8 @@ export default function AdminSettings() {
     site_logo: '',
     site_favicon: '',
     copyright_text: '',
+    store_phone: '',
+    store_email: '',
     allow_guest_checkout: 'true',
     whatsapp_number: '',
     product_whatsapp_enabled: 'false',
@@ -504,6 +506,22 @@ WITH CHECK (
                         className="w-full bg-white border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                         placeholder="© 2026 Your Store Name. All rights reserved."
                       />
+                   </div>
+                 </div>
+
+                 {/* Store contact (shown in the footer) */}
+                 <div className="flex flex-col md:flex-row gap-4 md:gap-8 py-6">
+                   <div className="md:w-1/3 shrink-0">
+                      <label className="block text-sm font-medium text-gray-900">Store Phone & Email</label>
+                      <p className="text-sm text-gray-500 mt-1">ওয়েবসাইটের ফুটারে দেখাবে। খালি রাখলে দেখাবে না।</p>
+                   </div>
+                   <div className="md:w-2/3 max-w-lg grid gap-3">
+                      <input type="tel" value={settings.store_phone} onChange={(e) => setSettings({...settings, store_phone: e.target.value})}
+                        className="w-full bg-white border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        placeholder="01XXXXXXXXX" aria-label="Store phone" />
+                      <input type="email" value={settings.store_email} onChange={(e) => setSettings({...settings, store_email: e.target.value})}
+                        className="w-full bg-white border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        placeholder="support@yourshop.com" aria-label="Store email" />
                    </div>
                  </div>
 
