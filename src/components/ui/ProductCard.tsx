@@ -1,10 +1,9 @@
 import React from 'react';
 import { ShoppingCart } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useCart } from '../../contexts/CartContext';
 import toast from 'react-hot-toast';
-import { trackAddToCart, trackInitiateCheckout } from '../../lib/fbPixel';
-import { CheckoutPopup } from './CheckoutPopup';
+import { trackAddToCart } from '../../lib/fbPixel';
 import { buildCloudinaryUrl } from '../../lib/cloudinary';
 import { trackEvent } from '../../lib/analytics';
 import { useSettings } from '../../contexts/SettingsContext';
@@ -36,11 +35,9 @@ export const ProductCard: React.FC<ProductCardProps> = (props) => {
 };
 
 const ClassicProductCard: React.FC<ProductCardProps> = ({ product, showRating = false }) => {
-  const [isCheckoutPopupOpen, setIsCheckoutPopupOpen] = React.useState(false);
   const op = product.original_price || product.originalPrice || 0;
   const { addToCart, setIsCartOpen } = useCart();
   const { settings } = useSettings();
-  const navigate = useNavigate();
   const productUrl = `/product/${product.slug || product.id}`;
 
   const cardStyle = settings?.theme_card_style || 'modern-elevated';
@@ -57,13 +54,6 @@ const ClassicProductCard: React.FC<ProductCardProps> = ({ product, showRating = 
     toast.success('Added to cart!');
   };
 
-  const handleOrderNow = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    trackEvent('buy_now', { product_id: product.id });
-    trackAddToCart(product, 1);
-    setIsCheckoutPopupOpen(true);
-  };
 
   const cardClasses = cardStyle === 'minimal-border'
     ? "group bg-white overflow-hidden border-2 border-slate-200/90 hover:border-primary flex flex-col h-full shadow-none transition-all duration-300 hover:-translate-y-0.5 relative"
@@ -163,23 +153,16 @@ const ClassicProductCard: React.FC<ProductCardProps> = ({ product, showRating = 
       </Link>
 
       <div className="px-3 pb-3 sm:px-4 sm:pb-4 bg-white">
-        <button
-          onClick={handleOrderNow}
+        {/* Opens the product page, so customers see the details before ordering */}
+        <Link
+          to={productUrl}
           className={btnClasses}
           style={{ borderRadius: btnRadius }}
         >
-          অর্ডার করুন
-        </button>
+          View Details
+        </Link>
       </div>
 
-      {isCheckoutPopupOpen && (
-        <CheckoutPopup
-          isOpen={isCheckoutPopupOpen}
-          onClose={() => setIsCheckoutPopupOpen(false)}
-          initialProduct={product}
-          initialQuantity={1}
-        />
-      )}
     </div>
   );
 };
