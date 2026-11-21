@@ -1,0 +1,64 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:Hind;font-weight:500;src:url(../fonts/node_modules/@fontsource/hind-siliguri/files/hind-siliguri-bengali-500-normal.woff2)}
+@font-face{font-family:Hind;font-weight:600;src:url(../fonts/node_modules/@fontsource/hind-siliguri/files/hind-siliguri-bengali-600-normal.woff2)}
+@font-face{font-family:Hind;font-weight:700;src:url(../fonts/node_modules/@fontsource/hind-siliguri/files/hind-siliguri-bengali-700-normal.woff2)}
+@font-face{font-family:NotoB;font-weight:900;src:url(../fonts/node_modules/@fontsource/noto-sans-bengali/files/noto-sans-bengali-bengali-900-normal.woff2)}
+*{margin:0;box-sizing:border-box}
+body{width:1080px;height:1350px;overflow:hidden;color:#fff;font-family:Hind,Inter,system-ui,sans-serif;
+ background:radial-gradient(800px 600px at 90% 0%,#4f46e5aa,transparent 65%),radial-gradient(700px 600px at 0% 62%,#db277744,transparent 60%),radial-gradient(600px 500px at 100% 100%,#f9731633,transparent 60%),linear-gradient(170deg,#0b0d2e,#12164a 55%,#0b0d2e)}
+.grain{position:absolute;inset:0;background-image:linear-gradient(#ffffff08 1px,transparent 1px),linear-gradient(90deg,#ffffff08 1px,transparent 1px);background-size:54px 54px;mask-image:radial-gradient(ellipse at 50% 40%,#000 30%,transparent 75%)}
+.top{position:absolute;left:70px;right:70px;top:60px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:16px;font:400 34px Inter,system-ui,sans-serif}
+.brand b{font-weight:700}
+.brand img{width:60px;height:60px;border-radius:15px;box-shadow:0 8px 24px #0006}
+.tag{font:600 24px Hind;border:1px solid #ffffff40;background:#ffffff12;padding:8px 22px;border-radius:999px;color:#e0e3ff}
+h1{position:absolute;left:70px;top:168px;font:900 74px/1.2 NotoB,Hind,sans-serif;letter-spacing:-.5px}
+h1 span{background:linear-gradient(90deg,#fdba74,#f472b6 60%,#a5b4fc);-webkit-background-clip:text;color:transparent}
+.sub{position:absolute;left:72px;top:358px;width:900px;font:500 30px/1.45 Hind;color:#cfd3ff}
+/* laptop window */
+.win{position:absolute;left:300px;top:478px;width:740px;height:470px;border-radius:18px;overflow:hidden;background:#fff;
+ box-shadow:0 40px 90px #0009,0 0 0 1px #ffffff30;transform:perspective(1800px) rotateY(-9deg) rotateX(3deg);transform-origin:left center}
+.bar{height:34px;background:#eef0f6;display:flex;align-items:center;gap:8px;padding:0 14px}
+.bar i{width:11px;height:11px;border-radius:50%;display:block}
+.bar span{margin-left:14px;flex:1;height:20px;border-radius:7px;background:#fff;font:500 12px Inter;color:#64748b;display:flex;align-items:center;padding-left:10px}
+.win img{width:740px;display:block}
+/* phones */
+.phone{position:absolute;width:220px;height:456px;border-radius:36px;background:#0a0a0f;padding:9px;box-shadow:0 34px 70px #000a,0 0 0 2px #ffffff26}
+.phone .scr{width:100%;height:100%;border-radius:30px;overflow:hidden;background:#fff;position:relative}
+.phone img{width:100%;display:block}
+.phone .notch{position:absolute;top:15px;left:50%;transform:translateX(-50%);width:9px;height:9px;background:#0a0a0f;border-radius:50%;z-index:2;display:none}
+.p1{left:56px;top:560px;transform:rotate(-6deg);z-index:3}
+.p2{left:258px;top:600px;z-index:4}
+.p3{left:458px;top:640px;transform:rotate(5deg);z-index:3}
+.lbl{position:absolute;font:700 18px Inter;color:#fff;padding:6px 14px;border-radius:999px;z-index:6;box-shadow:0 6px 18px #0006;white-space:nowrap}
+/* floating card */
+.float{position:absolute;right:46px;top:760px;width:300px;background:#ffffffee;color:#0f172a;border-radius:22px;padding:22px 24px;z-index:7;box-shadow:0 26px 60px #0008}
+.float h4{font:700 24px Hind;display:flex;align-items:center;gap:10px}
+.sw{display:flex;gap:10px;margin-top:14px}
+.sw i{width:36px;height:36px;border-radius:11px;display:block}
+.sw i.on{outline:3px solid #0f172a;outline-offset:3px}
+.rows{margin-top:16px;display:grid;gap:9px}
+.rows div{display:flex;justify-content:space-between;font:600 19px Hind;color:#475569;border-top:1px solid #e2e8f0;padding-top:9px}
+.rows b{font:700 17px Inter;color:#4f46e5}
+.feat{position:absolute;left:70px;right:70px;top:1140px;display:flex;gap:10px;flex-wrap:nowrap;justify-content:space-between}
+.feat div{font:600 19.5px Hind;white-space:nowrap;padding:9px 14px !important;background:#ffffff14;border:1px solid #ffffff2e;padding:9px 18px;border-radius:14px}
+.cta{position:absolute;left:70px;right:70px;bottom:52px;height:88px;border-radius:24px;background:#fff;color:#12164a;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 32px}.cta b{font:700 32px Hind}.cta span{font:700 26px Hind;color:#fff;background:linear-gradient(90deg,#f97316,#db2777);padding:12px 26px;border-radius:16px}
+</style></head><body><div class="grain"></div>
+<div class="top"><div class="brand"><img src="logo-mark.svg"><span><b>cloud</b>commerce</span></div><div class="tag">✦ প্রিমিয়াম থিম স্টুডিও</div></div>
+<h1>আপনার দোকান,<br><span>আপনার স্টাইলে</span></h1>
+<div class="sub">কোড ছাড়াই কালার, ফন্ট, কার্ড আর বাটন বদলান — এক ক্লিকে পুরো ওয়েবসাইটের লুক নতুন।</div>
+
+<div class="win"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>Admin › Theme Customization</span></div><img src="ad-cust.png"></div>
+
+<div class="phone p1"><div class="notch"></div><div class="scr"><img src="st-a.png"></div></div>
+<div class="phone p2"><div class="notch"></div><div class="scr"><img src="st-b.png"></div></div>
+<div class="phone p3"><div class="notch"></div><div class="scr"><img src="st-c.png"></div></div>
+
+<div class="float"><h4>🎨 থিম কাস্টমাইজ</h4>
+ <div class="sw"><i style="background:#2563eb"></i><i class="on" style="background:#be185d"></i><i style="background:#047857"></i><i style="background:#f97316"></i><i style="background:#7c3aed"></i><i style="background:#0f172a"></i></div>
+ <div class="rows"><div>ফন্ট<b>Outfit</b></div><div>কার্ড স্টাইল<b>Floating Glass</b></div><div>বাটন<b>Rounded Pill</b></div></div>
+</div>
+
+<div class="feat"><div>📱 মোবাইল-ফার্স্ট ডিজাইন</div><div>🎨 আনলিমিটেড কালার</div><div>📊 স্মার্ট অ্যাডমিন প্যানেল</div><div>🃏 ৪ রকম কার্ড স্টাইল</div></div>
+<div class="cta"><b>৩০ দিন সম্পূর্ণ ফ্রি ট্রায়াল</b><span>আজই শুরু করুন →</span></div>
+</body></html>
