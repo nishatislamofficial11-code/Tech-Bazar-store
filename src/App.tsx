@@ -251,7 +251,7 @@ export default function App() {
                         <Route path="billing" element={<AdminBilling />} />
                         <Route path="ai/inbox" element={<AiInbox />} />
                         <Route path="coupons" element={<AdminCoupons />} />
-                        <Route path="customer-sms" element={<AdminCustomerSms />} />
+                        <Route path="sms-setup" element={<AdminCustomerSms />} />
                         <Route path="ai/knowledge" element={<AiKnowledge />} />
                         <Route path="ai/settings" element={<AiSettings />} />
                         <Route path="ai/connections" element={<AiConnections />} />

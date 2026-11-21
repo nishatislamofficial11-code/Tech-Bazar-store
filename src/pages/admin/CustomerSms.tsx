@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { MessageSquareText, Send } from 'lucide-react';
+import { MessageSquareText, Send, ShoppingCart, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { currentStoreSlug } from '../../lib/currentStore';
 import { useSettings } from '../../contexts/SettingsContext';
@@ -21,19 +21,35 @@ const parts = (t: string) => {
 export default function CustomerSms() {
   const { settings, refreshSettings } = useSettings();
   const s = settings as Record<string, string | undefined>;
-  const [apiKey, setApiKey] = useState('');
-  const [senderId, setSenderId] = useState('');
+  const [balance, setBalance] = useState<number | null>(null);
+  const [price, setPrice] = useState(0.5);
+  const [history, setHistory] = useState<{ id: number; change: number; amount_tk: number | null; reason: string; created_at: string }[]>([]);
+  const [contact, setContact] = useState<{ phone?: string; whatsapp?: string }>({});
+  const [buyOpen, setBuyOpen] = useState(false);
+  const [buyTk, setBuyTk] = useState('500');
   const [onPlaced, setOnPlaced] = useState(false);
   const [onShipped, setOnShipped] = useState(false);
   const [textPlaced, setTextPlaced] = useState(DEFAULTS.placed);
   const [textShipped, setTextShipped] = useState(DEFAULTS.shipped);
   const [testPhone, setTestPhone] = useState('');
   const [busy, setBusy] = useState('');
-  const hasKey = Boolean(s.sms_api_key);
   const shop = s.siteName || s.site_title || '';
 
+  const loadWallet = async () => {
+    const [w, h, ps] = await Promise.all([
+      supabase.from('sms_wallets').select('balance').maybeSingle(),
+      supabase.from('sms_transactions').select('id, change, amount_tk, reason, created_at').order('created_at', { ascending: false }).limit(20),
+      supabase.from('platform_settings').select('key, value').in('key', ['sms_price', 'contact_phone', 'contact_whatsapp']),
+    ]);
+    setBalance(w.data?.balance ?? 0);
+    setHistory((h.data || []) as typeof history);
+    const m = Object.fromEntries(((ps.data || []) as { key: string; value: string }[]).map((r) => [r.key, r.value]));
+    if (Number(m.sms_price) > 0) setPrice(Number(m.sms_price));
+    setContact({ phone: m.contact_phone, whatsapp: m.contact_whatsapp });
+  };
+  useEffect(() => { loadWallet(); }, []);
+
   useEffect(() => {
-    setSenderId(s.sms_sender_id || '');
     setOnPlaced(s.customer_sms_placed === 'true');
     setOnShipped(s.customer_sms_shipped === 'true');
     setTextPlaced(s.customer_sms_placed_text || DEFAULTS.placed);
@@ -41,21 +57,16 @@ export default function CustomerSms() {
   }, [settings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
-    if ((onPlaced || onShipped) && !hasKey && !apiKey.trim()) return toast.error('SMS চালু করতে API Key দিন');
-    if ((onPlaced || onShipped) && !senderId.trim()) return toast.error('Sender ID দিন');
     setBusy('save');
     const rows = [
-      { key: 'sms_sender_id', value: senderId.trim() },
       { key: 'customer_sms_placed', value: onPlaced ? 'true' : 'false' },
       { key: 'customer_sms_shipped', value: onShipped ? 'true' : 'false' },
       { key: 'customer_sms_placed_text', value: textPlaced.trim() || DEFAULTS.placed },
       { key: 'customer_sms_shipped_text', value: textShipped.trim() || DEFAULTS.shipped },
-      ...(apiKey.trim() ? [{ key: 'sms_api_key', value: apiKey.trim() }] : []),
     ];
     const { error } = await supabase.from('settings').upsert(rows, { onConflict: 'store_id,key' });
     setBusy('');
     if (error) return toast.error(error.message);
-    setApiKey('');
     await refreshSettings();
     toast.success('সেভ হয়েছে');
   };
@@ -72,6 +83,7 @@ export default function CustomerSms() {
       const out = await res.json().catch(() => null);
       if (!res.ok || !out?.ok) throw new Error(out?.error || `HTTP ${res.status}`);
       toast.success('টেস্ট SMS পাঠানো হয়েছে');
+      loadWallet();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'পাঠানো যায়নি');
     } finally { setBusy(''); }
@@ -98,19 +110,18 @@ export default function CustomerSms() {
   return (
     <div className="max-w-3xl mx-auto space-y-5 pb-16">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><MessageSquareText className="h-6 w-6 text-primary" />Customer SMS</h1>
-        <p className="text-sm text-gray-500">অর্ডার পেলে আর কুরিয়ারে পাঠালে কাস্টমারকে নিজে থেকেই SMS যাবে। SMS যাবে আপনার নিজের BulkSMSBD অ্যাকাউন্ট থেকে।</p>
+        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><MessageSquareText className="h-6 w-6 text-primary" />SMS Setup</h1>
+        <p className="text-sm text-gray-500">অর্ডার পেলে আর কুরিয়ারে পাঠালে কাস্টমারকে নিজে থেকেই SMS যাবে। প্রতিটা SMS আপনার SMS ব্যালান্স থেকে কাটা হবে।</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
-        <h2 className="font-bold text-gray-900">BulkSMSBD অ্যাকাউন্ট</h2>
-        <p className="text-xs text-gray-500">bulksmsbd.net-এ অ্যাকাউন্ট খুলে API Key আর Sender ID নিন। API Key শুধু আপনি আর সার্ভার দেখতে পারে।</p>
-        <label className="block text-xs font-bold text-gray-600">API Key
-          <input type="password" autoComplete="off" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={hasKey ? 'সেভ করা আছে — বদলাতে নতুনটা দিন' : 'BulkSMSBD API Key'} className={input} />
-        </label>
-        <label className="block text-xs font-bold text-gray-600">Sender ID
-          <input value={senderId} onChange={(e) => setSenderId(e.target.value)} placeholder="BulkSMSBD Sender ID" className={input} />
-        </label>
+      <div className="rounded-2xl p-5 text-white bg-gradient-to-br from-primary to-indigo-700 shadow-sm">
+        <p className="text-sm opacity-80">আপনার SMS ব্যালান্স</p>
+        <p className="mt-1 text-4xl font-black">{balance === null ? '…' : balance.toLocaleString('en-US')} <span className="text-base font-semibold opacity-80">SMS</span></p>
+        <p className="mt-1 text-xs opacity-80">প্রতি SMS ৳{price.toFixed(2)} · বাংলা SMS-এ ৭০ অক্ষর = ১টা SMS</p>
+        <button onClick={() => setBuyOpen(true)} className="mt-4 flex items-center gap-2 bg-white text-primary font-bold text-sm px-4 py-2 rounded-xl">
+          <ShoppingCart className="h-4 w-4" />SMS কিনুন
+        </button>
+        {balance === 0 && (onPlaced || onShipped) && <p className="mt-3 text-xs bg-white/15 rounded-lg px-3 py-2">ব্যালান্স শূন্য, তাই এখন কোনো SMS যাবে না। SMS কিনলে সাথে সাথে চালু হবে।</p>}
       </div>
 
       {block('অর্ডার পেলে SMS', 'ক্যাশ অন ডেলিভারি অর্ডার হলে সাথে সাথে, অনলাইন পেমেন্ট হলে টাকা পাওয়ার পর।', onPlaced, setOnPlaced, textPlaced, setTextPlaced)}
@@ -129,6 +140,49 @@ export default function CustomerSms() {
           </button>
         </div>
       </div>
+      {history.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <h2 className="font-bold text-gray-900 mb-2">সাম্প্রতিক হিসাব</h2>
+          <div className="divide-y divide-gray-50 text-sm">
+            {history.map((t) => (
+              <div key={t.id} className="flex items-center justify-between py-2">
+                <span className="text-gray-600">
+                  {t.reason === 'purchase' ? 'SMS কেনা' : t.reason.startsWith('refund') ? 'ফেরত (পাঠানো যায়নি)' : t.reason === 'test' ? 'টেস্ট SMS' : t.reason === 'order placed' ? 'অর্ডার SMS' : t.reason === 'order shipped' ? 'কুরিয়ার SMS' : t.reason}
+                  <span className="block text-[11px] text-gray-400">{new Date(t.created_at).toLocaleString('en-GB', { timeZone: 'Asia/Dhaka', dateStyle: 'medium', timeStyle: 'short' })}</span>
+                </span>
+                <span className={`font-bold ${t.change > 0 ? 'text-emerald-600' : 'text-gray-700'}`}>{t.change > 0 ? '+' : ''}{t.change}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {buyOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" onClick={() => setBuyOpen(false)}>
+          <div className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-lg">SMS কিনুন</h2>
+              <button onClick={() => setBuyOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100" aria-label="বন্ধ"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {['200', '500', '1000'].map((v) => (
+                <button key={v} onClick={() => setBuyTk(v)} className={`rounded-xl border py-2 text-sm font-bold ${buyTk === v ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 text-gray-700'}`}>৳{v}</button>
+              ))}
+            </div>
+            <label className="block text-xs font-bold text-gray-600">টাকার পরিমাণ
+              <input type="number" min={50} value={buyTk} onChange={(e) => setBuyTk(e.target.value)} className={input} />
+            </label>
+            <p className="text-sm text-gray-700">আপনি পাবেন <b>{Math.floor((Number(buyTk) || 0) / price).toLocaleString('en-US')}টা SMS</b></p>
+            <div className="rounded-xl bg-amber-50 text-amber-800 text-xs p-3">
+              অনলাইনে (বিকাশ/কার্ড) সরাসরি কেনার ব্যবস্থা খুব শীঘ্রই চালু হচ্ছে। এখন কিনতে আমাদের সাথে যোগাযোগ করুন, টাকা পাঠালে সাথে সাথে ব্যালান্স যোগ হয়ে যাবে।
+              {(contact.whatsapp || contact.phone) && (
+                <span className="block mt-1 font-bold">{contact.whatsapp ? `WhatsApp: ${contact.whatsapp}` : ''}{contact.whatsapp && contact.phone ? ' · ' : ''}{contact.phone ? `ফোন: ${contact.phone}` : ''}</span>
+              )}
+            </div>
+            <button disabled className="w-full bg-gray-200 text-gray-500 font-bold py-2.5 rounded-xl cursor-not-allowed">অনলাইনে পেমেন্ট (শীঘ্রই)</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

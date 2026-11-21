@@ -5,8 +5,7 @@
  *   POST /api/order-sms { store, action: 'test', phone }               → shop staff: test message
  */
 import { serverConfig, rest, resolveStore } from './_store-lib.js';
-import { sendOrderSms, storeSmsSettings, fillTemplate } from './_order-sms.js';
-import { sendSms } from './_sms.js';
+import { sendOrderSms, storeSmsSettings, fillTemplate, sendPaidSms } from './_order-sms.js';
 
 const json = (payload, status = 200) => new Response(JSON.stringify(payload), {
   status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
@@ -38,10 +37,13 @@ export async function onRequest(context) {
       const phone = String(body.phone || '').replace(/\D/g, '').slice(-11);
       if (!/^01[3-9]\d{8}$/.test(phone)) return json({ ok: false, error: 'সঠিক মোবাইল নম্বর দিন' }, 400);
       const conf = await storeSmsSettings(cfg, store.id);
-      if (!conf.sms.apiKey || !conf.sms.senderId) return json({ ok: false, error: 'আগে SMS API Key আর Sender ID সেভ করুন' }, 400);
       const sample = { id: 'TEST1234abcd', customer_name: 'রহিম', total_amount: 2150, courier_name: 'steadfast', courier_tracking_code: 'TRK123' };
-      await sendSms(conf.sms, phone, fillTemplate(conf.text.placed, sample, conf.shop));
-      return json({ ok: true });
+      try {
+        const used = await sendPaidSms(cfg, store.id, phone, fillTemplate(conf.text.placed, sample, conf.shop), 'test');
+        return json({ ok: true, used });
+      } catch (err) {
+        return json({ ok: false, error: err?.message || 'পাঠানো যায়নি' }, 400);
+      }
     }
 
     const orderId = String(body.order_id || '');

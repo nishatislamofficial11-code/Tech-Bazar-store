@@ -62,7 +62,7 @@ export const NAV_ITEMS: NavItemDef[] = [
   { section: 'Sales Tools', name: 'Logistics', path: '/admin/couriers', icon: Truck, adminOnly: true },
   { section: 'Sales Tools', name: 'Tracking', path: '/admin/pixel', icon: Target, adminOnly: true },
   { section: 'Sales Tools', name: 'Coupons', path: '/admin/coupons', icon: Tag, adminOnly: true },
-  { section: 'Sales Tools', name: 'Customer SMS', path: '/admin/customer-sms', icon: MessageSquareText, adminOnly: true },
+  { section: 'Sales Tools', name: 'SMS Setup', path: '/admin/sms-setup', icon: MessageSquareText, adminOnly: true },
   { 
     section: 'Sales Tools',
     name: 'Fraud Guard', 
