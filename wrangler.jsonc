@@ -7,6 +7,10 @@
     "SUPABASE_URL": "https://tvfhsgokbwekpfyrmhbl.supabase.co",
     "SUPABASE_ANON_KEY": "sb_publishable_F2Vql83Ewz488LnbxNFkQQ_61zuR9PS"
   },
+  "triggers": {
+    // Every day at 04:00 UTC (10:00 in Bangladesh): reminder SMS to shop owners
+    "crons": ["0 4 * * *"]
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
