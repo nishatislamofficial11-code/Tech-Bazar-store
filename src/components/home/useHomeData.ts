@@ -37,7 +37,7 @@ export const useBanners = () =>
 
 export const useFeaturedCategories = () =>
   useCachedQuery<HomeCategory>('categories_cache', 5, async () => {
-    const { data } = await supabase.from('categories').select('*').eq('is_featured', true).order('created_at', { ascending: false }).limit(10);
+    const { data } = await supabase.from('categories').select('*').eq('is_featured', true).order('sort_order', { ascending: true }).order('created_at', { ascending: false }).limit(10);
     return data || null;
   });
 

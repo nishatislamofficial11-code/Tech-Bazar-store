@@ -3,7 +3,7 @@ import { ThemeHint } from '../../components/admin/ThemeHint';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
-import { Plus, Pencil, Trash2, X, Image as ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Image as ImageIcon, ArrowUp, ArrowDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Modal } from '../../components/ui/Modal';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
@@ -15,6 +15,7 @@ interface Category {
   icon: string | null;
   image_url?: string | null;
   is_featured?: boolean;
+  sort_order?: number;
 }
 
 export default function AdminCategories() {
@@ -29,9 +30,26 @@ export default function AdminCategories() {
     fetchCategories();
   }, []);
 
+  // Move a category up or down in the home page order
+  const moveCategory = async (index: number, dir: -1 | 1) => {
+    const to = index + dir;
+    if (to < 0 || to >= categories.length) return;
+    const list = [...categories];
+    [list[index], list[to]] = [list[to], list[index]];
+    const ordered = list.map((c, i) => ({ ...c, sort_order: i + 1 }));
+    const changed = ordered.filter((c) => c.sort_order !== categories.find((x) => x.id === c.id)?.sort_order);
+    setCategories(ordered);
+    const results = await Promise.all(changed.map((c) => supabase.from('categories').update({ sort_order: c.sort_order }).eq('id', c.id)));
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      toast.error(failed.error.message.includes('sort_order') ? 'ডাটাবেস আপডেট লাগবে (categories.sort_order)। SQL চালান।' : failed.error.message);
+      fetchCategories();
+    }
+  };
+
   const fetchCategories = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('categories').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false });
     if (error) {
       toast.error('Failed to fetch categories');
     } else {
@@ -54,7 +72,9 @@ export default function AdminCategories() {
       if (error) toast.error(`Failed to update category: ${error.message}`);
       else toast.success('Category updated successfully');
     } else {
-      const { error } = await supabase.from('categories').insert([dataToSave]);
+      // New categories go to the end of the home page order
+      const nextOrder = categories.reduce((m, c) => Math.max(m, Number(c.sort_order || 0)), 0) + 1;
+      const { error } = await supabase.from('categories').insert([{ ...dataToSave, sort_order: nextOrder }]);
       if (error) toast.error(`Failed to add category: ${error.message}`);
       else toast.success('Category added successfully');
     }
@@ -123,6 +143,7 @@ export default function AdminCategories() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Categories</h1>
           <p className="text-sm font-medium text-slate-500 mt-1">Organize your store catalog effectively.</p>
+          <p className="text-xs text-slate-500 mt-1">⬆️ ⬇️ দিয়ে ক্রম ঠিক করুন — হোম পেজে ক্যাটাগরি এই ক্রমে দেখাবে।</p>
         </div>
         <button 
             onClick={() => openModal()}
@@ -137,6 +158,7 @@ export default function AdminCategories() {
               <table className="w-full text-left text-sm whitespace-nowrap">
                   <thead className="bg-slate-50/50 text-slate-500 font-bold border-b border-slate-100">
                       <tr>
+                          <th className="py-3 px-4">Order</th>
                           <th className="py-3 px-6">Image</th>
                           <th className="py-3 px-6">Name</th>
                           <th className="py-3 px-6">Featured</th>
@@ -145,12 +167,19 @@ export default function AdminCategories() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                       {loading ? (
-                          <tr><td colSpan={4} className="py-8"><LoadingSpinner message="Loading categories..." /></td></tr>
+                          <tr><td colSpan={5} className="py-8"><LoadingSpinner message="Loading categories..." /></td></tr>
                       ) : categories.length === 0 ? (
-                          <tr><td colSpan={4} className="py-4 text-center text-gray-500">No categories found</td></tr>
+                          <tr><td colSpan={5} className="py-4 text-center text-gray-500">No categories found</td></tr>
                       ) : (
-                          categories.map((cat) => (
+                          categories.map((cat, idx) => (
                               <tr key={cat.id} className="hover:bg-gray-50">
+                                  <td className="py-3 px-4">
+                                    <div className="flex items-center gap-1">
+                                      <span className="w-5 text-xs font-bold text-slate-400">{idx + 1}</span>
+                                      <button onClick={() => moveCategory(idx, -1)} disabled={idx === 0} aria-label="Move up" className="p-1 rounded hover:bg-slate-100 disabled:opacity-30"><ArrowUp className="w-4 h-4" /></button>
+                                      <button onClick={() => moveCategory(idx, 1)} disabled={idx === categories.length - 1} aria-label="Move down" className="p-1 rounded hover:bg-slate-100 disabled:opacity-30"><ArrowDown className="w-4 h-4" /></button>
+                                    </div>
+                                  </td>
                                   <td className="py-3 px-6">
                                     <div className="w-10 h-10 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
                                       {cat.image_url ? (
