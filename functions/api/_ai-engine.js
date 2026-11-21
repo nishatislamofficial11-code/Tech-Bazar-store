@@ -365,15 +365,22 @@ async function askAi(cfg, platform, ai, context, history) {
   } catch (err) {
     if (!err?.busy || !platform.backups?.length) throw err;
     // Free Groq/OpenRouter models usually can't see photos, so they only stand in for text chats
-    const hasPhoto = history.some((m) => (m.attachments || []).some((x) => x?.type === 'image'));
+    // Only the customer's latest message decides whether a photo is involved
+    const lastCustomer = [...history].reverse().find((m) => m.role === 'customer');
+    const hasPhoto = (lastCustomer?.attachments || []).some((x) => x?.type === 'image');
     const backups = platform.backups.filter((b) => !hasPhoto || ['anthropic', 'openai', 'google'].includes(b.provider));
+    const reasons = [err.message];
     let last = err;
     for (const backup of backups) {
       try {
         return await askAiWithModelFix(cfg, backup, ai, context, history, false);
-      } catch (e) { last = e; }
+      } catch (e) { last = e; reasons.push(e.message); }
     }
-    throw last;
+    // Report every company's problem, so the admin can see which key needs balance
+    const all = new Error(reasons.join(' | '));
+    all.busy = last.busy;
+    all.modelMissing = last.modelMissing;
+    throw all;
   }
 }
 
@@ -478,7 +485,7 @@ export async function handleCustomerMessage(cfg, store, conv, text, photos = [])
     await refundReply(cfg, store.id);
     // A photo the AI couldn't read is for a person to look at, not a reason to retry
     if (images.length && !err?.busy) return handOff(`কাস্টমার ছবি পাঠিয়েছেন, AI দেখতে পারেনি। ছবি দেখে উত্তর দিন (${String(err?.message || err).slice(0, 200)})`, BUSY_REPLY);
-    return handOff(`${TECH}AI উত্তর দিতে পারেনি (${String(err?.message || err).slice(0, 220)})`, BUSY_REPLY);
+    return handOff(`${TECH}AI উত্তর দিতে পারেনি (${String(err?.message || err).slice(0, 600)})`, BUSY_REPLY);
   }
   if (!out || typeof out.reply !== 'string' || !out.reply.trim()) {
     await refundReply(cfg, store.id);
