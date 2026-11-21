@@ -133,7 +133,8 @@ export default function BulkProductUpload() {
         // Process Multiple Images
         let imagesArray: string[] = [];
         if (row.images) {
-          const rawImages = row.images.split(',').map(url => url.trim()).filter(url => url);
+          // Also accepts a JSON-style list like ["url1","url2"] (some exports write images that way)
+          const rawImages = row.images.split(',').map(url => url.trim().replace(/^[\["'\s]+|[\]"'\s]+$/g, '')).filter(url => url);
           for (const url of rawImages) {
             if (url.startsWith('http')) {
               const cloudUrl = await uploadToCloudinary(url);
