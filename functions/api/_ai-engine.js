@@ -5,6 +5,7 @@
 // that the Cloudflare Worker bundle cannot include.
 import { rest, notifyStoreTelegram, escapeHtml } from './_store-lib.js';
 import { listModels, pickModel } from './_ai-models-lib.js';
+import { createAiOrder, cleanPhone } from './_ai-orders.js';
 
 const PROVIDERS = {
   anthropic: { keyName: 'private_anthropic_api_key', defaultModel: 'claude-haiku-5-5' },
@@ -36,8 +37,30 @@ const REPLY_SCHEMA = {
     sentiment: { type: 'string', enum: ['positive', 'neutral', 'negative'] },
     summary: { type: 'string', description: 'One-line Bangla summary of the whole conversation so far, for the shop staff' },
     show_products: { type: 'array', items: { type: 'string' }, description: 'Codes like P3 of products to show as photo cards (max 4), or empty' },
+    order: {
+      type: 'object',
+      description: 'Set place=true only after the customer confirmed the order summary; otherwise place=false and empty values',
+      properties: {
+        place: { type: 'boolean' },
+        customer_name: { type: 'string' },
+        phone: { type: 'string' },
+        address: { type: 'string' },
+        inside_dhaka: { type: 'boolean' },
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { code: { type: 'string' }, quantity: { type: 'integer' }, option: { type: 'string' } },
+            required: ['code', 'quantity', 'option'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['place', 'customer_name', 'phone', 'address', 'inside_dhaka', 'items'],
+      additionalProperties: false,
+    },
   },
-  required: ['reply', 'needs_human', 'handoff_reason', 'sentiment', 'summary', 'show_products'],
+  required: ['reply', 'needs_human', 'handoff_reason', 'sentiment', 'summary', 'show_products', 'order'],
   additionalProperties: false,
 };
 
@@ -165,11 +188,16 @@ needs_human=true করবে যখন:
 - কাস্টমার মানুষের সাথে কথা বলতে চায়
 - অভিযোগ, ভাঙা/ভুল প্রোডাক্ট, রিফান্ড, টাকা কাটা, ডেলিভারি সমস্যা
 - কাস্টমার রেগে আছে, বা একই বিষয় বারবার বোঝানো যাচ্ছে না
-- কাস্টমার অর্ডারের সব তথ্য দিয়ে দিয়েছে (এজেন্ট অর্ডার কনফার্ম করবে)
 needs_human=true হলে reply-তে কাস্টমারকে ভদ্রভাবে জানাও যে এজেন্ট শীঘ্রই উত্তর দেবেন।
 
+অর্ডার নেওয়া (তুমি নিজেই অর্ডার করতে পারো):
+1. নাম, মোবাইল নম্বর (01XXXXXXXXX), পুরো ঠিকানা (এলাকা ও জেলা সহ), কোন প্রোডাক্ট, কয়টা, আর সাইজ/রং থাকলে সেটা জেনে নাও।
+2. সব পেলে একবার সারাংশ দাও: প্রোডাক্ট, দাম, ডেলিভারি চার্জ (ঠিকানা ঢাকার ভিতরে না বাইরে দেখে), মোট টাকা, ক্যাশ অন ডেলিভারি। তারপর জিজ্ঞেস করো "অর্ডার কনফার্ম করবো?"
+3. কাস্টমার স্পষ্ট হ্যাঁ বললে তবেই order.place=true দাও, সাথে নাম, ফোন, ঠিকানা, inside_dhaka আর items (প্রোডাক্ট কোড যেমন "P3", quantity, option-এ সাইজ/রং বা খালি)। reply-তে শুধু ধন্যবাদ দাও; অর্ডার নম্বর সার্ভার নিজে পাঠাবে, তুমি অর্ডার নম্বর বানাবে না।
+4. অন্য সব উত্তরে order.place=false, বাকি ঘর খালি ("" / false / [])।
+
 উত্তর শুধু একটা JSON অবজেক্ট হবে, এই ঘরগুলো সহ:
-{"reply": "কাস্টমারকে পাঠানোর মেসেজ", "needs_human": true/false, "handoff_reason": "এজেন্টের জন্য ছোট কারণ (না লাগলে খালি)", "sentiment": "positive" | "neutral" | "negative", "summary": "পুরো কথোপকথনের এক লাইনের সারাংশ", "show_products": ["P1"]}`;
+{"reply": "কাস্টমারকে পাঠানোর মেসেজ", "needs_human": true/false, "handoff_reason": "এজেন্টের জন্য ছোট কারণ (না লাগলে খালি)", "sentiment": "positive" | "neutral" | "negative", "summary": "পুরো কথোপকথনের এক লাইনের সারাংশ", "show_products": ["P1"], "order": {"place": false, "customer_name": "", "phone": "", "address": "", "inside_dhaka": false, "items": []}}`;
 }
 
 // Neutral message list: { role, content, image? } — each company's function turns it into its own format.
@@ -329,8 +357,11 @@ async function askAi(cfg, platform, ai, context, history) {
     return await askAiWithModelFix(cfg, platform, ai, context, history, true);
   } catch (err) {
     if (!err?.busy || !platform.backups?.length) throw err;
+    // Free Groq/OpenRouter models usually can't see photos, so they only stand in for text chats
+    const hasPhoto = history.some((m) => (m.attachments || []).some((x) => x?.type === 'image'));
+    const backups = platform.backups.filter((b) => !hasPhoto || ['anthropic', 'openai', 'google'].includes(b.provider));
     let last = err;
-    for (const backup of platform.backups) {
+    for (const backup of backups) {
       try {
         return await askAiWithModelFix(cfg, backup, ai, context, history, false);
       } catch (e) { last = e; }
@@ -454,10 +485,28 @@ export async function handleCustomerMessage(cfg, store, conv, text, photos = [])
     await updateConversation(cfg, conv, { sentiment, summary });
     return handOff(String(out.handoff_reason || 'AI নিশ্চিত না').slice(0, 300), ai.handoff_message?.trim() || reply);
   }
+  let replyText = out.reply.trim();
+  if (out.order?.place) {
+    // Don't create the same order twice if the customer says "yes" again
+    const since = new Date(Date.now() - 15 * 60_000).toISOString();
+    const phone = cleanPhone(out.order.phone);
+    const dup = phone ? await rest(cfg, `orders?store_id=eq.${store.id}&order_source=eq.ai_chat&customer_phone=eq.${phone}&created_at=gt.${since}&select=id&limit=1`).catch(() => []) : [];
+    if (dup?.length) {
+      replyText += `\n\nআপনার অর্ডার (#${String(dup[0].id).slice(0, 8).toUpperCase()}) আগেই নেওয়া হয়েছে।`;
+    } else {
+      const made = await createAiOrder(cfg, store, conv, out.order, shop.products).catch((e) => ({ ok: false, reason: e?.message || 'সমস্যা' }));
+      if (!made.ok) {
+        await updateConversation(cfg, conv, { sentiment, summary });
+        return handOff(`AI অর্ডার করতে পারেনি: ${made.reason}। কাস্টমারের তথ্য দেখে অর্ডার করে দিন`,
+          'ধন্যবাদ! আপনার অর্ডারের তথ্য আমাদের প্রতিনিধির কাছে পাঠানো হয়েছে, তিনি শীঘ্রই কনফার্ম করবেন।');
+      }
+      replyText = made.message;
+    }
+  }
   const attachments = productCards(out.show_products, shop.products);
-  await addMessage(cfg, conv, 'ai', out.reply.trim(), attachments.length ? { attachments } : {});
-  await updateConversation(cfg, conv, { ...base, status: 'ai', handoff_reason: null, unread: 0, sentiment, summary, last_message: out.reply.trim().slice(0, 200) });
-  return { reply: out.reply.trim(), status: 'ai', attachments };
+  await addMessage(cfg, conv, 'ai', replyText, attachments.length ? { attachments } : {});
+  await updateConversation(cfg, conv, { ...base, status: 'ai', handoff_reason: null, unread: 0, sentiment, summary, last_message: replyText.slice(0, 200) });
+  return { reply: replyText, status: 'ai', attachments };
 }
 
 export async function addAgentMessage(cfg, conv, agent, text) {
