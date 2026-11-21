@@ -11,6 +11,8 @@ import { onRequest as aiWidget } from './functions/api/ai-widget.js';
 import { onRequest as aiModels } from './functions/api/ai-models.js';
 import { onRequest as orderSms } from './functions/api/order-sms.js';
 import { onRequest as middleware } from './functions/_middleware.js';
+import { serverConfig } from './functions/api/_store-lib.js';
+import { runMerchantReminders } from './functions/api/_reminders.js';
 
 const routes = {
   '/api/store-payments': storePayments,
@@ -41,5 +43,10 @@ export default {
     } catch {
       return env.ASSETS.fetch(request);
     }
+  },
+
+  // Daily job (see "triggers" in wrangler.jsonc): free reminder SMS to shop owners whose trial/plan is ending
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runMerchantReminders(serverConfig(env)).catch(() => null));
   },
 };
