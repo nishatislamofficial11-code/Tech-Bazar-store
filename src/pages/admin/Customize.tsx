@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ThemeHint } from '../../components/admin/ThemeHint';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import {
@@ -691,6 +692,7 @@ export default function AdminCustomize() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
+          <ThemeHint text={{ fashion: <>উপরের নোটিশ বার দুই থিমেই কাজ করে। কিন্তু হেডার, নিচের মেনু, ক্যাটাগরি আর ফুটারের স্টাইল অপশনগুলো শুধু Classic থিমের জন্য। Fashion থিমে এগুলো থিমের নিজস্ব ডিজাইনে থাকে।</> }} />
           {/* Top Announcement Bar Engine */}
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 sm:p-8 space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-slate-100">
@@ -1050,6 +1052,7 @@ export default function AdminCustomize() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
+          <ThemeHint text={{ fashion: <>Fashion থিমে প্রোডাক্ট কার্ড থিমের নিজস্ব ডিজাইনে থাকে (View Details বাটন)। এখানকার কার্ড আর বাটন স্টাইল শুধু Classic থিমে কাজ করে।</> }} />
           {/* Product Card Style */}
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 sm:p-8 space-y-6">
             <div className="flex items-center gap-3 pb-4 border-b border-slate-100">

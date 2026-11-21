@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ThemeHint } from '../../components/admin/ThemeHint';
 import { supabase } from '../../lib/supabase';
 import { Check, X, Search, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -142,6 +143,7 @@ NOTIFY pgrst, 'reload schema';
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Manage Reviews</h1>
           <p className="text-sm font-medium text-slate-500 mt-1">Approve or reject customer reviews</p>
+          <ThemeHint className="mt-3" text={{ fashion: <>Approve করা রিভিউ হোম পেজের <b>Customer Reviews</b> অংশে আর প্রোডাক্ট কার্ডের ⭐ রেটিংয়ে দেখায়।</> }} />
         </div>
       </motion.div>
 

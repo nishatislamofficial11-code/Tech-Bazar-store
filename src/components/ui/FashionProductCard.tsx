@@ -14,6 +14,8 @@ export interface FashionCardProduct {
   is_flash_sale?: boolean;
   is_best_deal?: boolean;
   created_at?: string;
+  /** Badge chosen in the product editor: new | hot | sale | exclusive | none (empty = automatic) */
+  badge?: string | null;
   /** Average of approved reviews, when known */
   rating?: number;
   reviews?: number;
@@ -21,7 +23,11 @@ export interface FashionCardProduct {
 
 const NEW_DAYS = 14;
 
+export const BADGE_LABELS: Record<string, string> = { new: 'নতুন', hot: 'হট', sale: 'সেল', exclusive: 'এক্সক্লুসিভ' };
+
 function badgeOf(p: FashionCardProduct): string | null {
+  if (p.badge === 'none') return null;
+  if (p.badge && BADGE_LABELS[p.badge]) return BADGE_LABELS[p.badge];
   if (p.created_at && Date.now() - Date.parse(p.created_at) < NEW_DAYS * 86400000) return 'নতুন';
   if (p.is_best_deal) return 'হট';
   if (p.is_flash_sale) return 'সেল';

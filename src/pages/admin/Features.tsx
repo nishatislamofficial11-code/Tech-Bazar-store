@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { ThemeHint } from '../../components/admin/ThemeHint';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { 
@@ -253,6 +254,9 @@ export default function AdminFeatures() {
           <p className="text-sm text-slate-500 mt-1 max-w-2xl">
             Visually manage homepage service badges, warranty guarantees, and product page delivery policies.
           </p>
+          <ThemeHint className="mt-3 max-w-2xl" text={{
+            fashion: <>হোম পেজে চালু থাকা <b>প্রথম ৪টা</b> Store Feature ২×২ কার্ডে দেখায় (যেমন Free Delivery, Cash on Delivery, 7 Days Return, 24/7 Support)।</>,
+          }} />
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
