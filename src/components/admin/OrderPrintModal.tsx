@@ -9,6 +9,9 @@ export interface PrintableOrder {
   id: string;
   created_at: string;
   total_amount: number;
+  shipping_charge?: number | null;
+  discount_amount?: number | null;
+  coupon_code?: string | null;
   status: string;
   shipping_address: string;
   courier_name?: string;
@@ -549,12 +552,18 @@ export function OrderPrintModal({ isOpen, onClose, orders }: OrderPrintModalProp
                     <div className="w-full sm:w-1/2 space-y-2 text-xs">
                       <div className="flex justify-between py-1 text-slate-600 font-medium">
                         <span>Items Subtotal:</span>
-                        <span className="font-mono font-bold">৳{order.total_amount?.toFixed(2)}</span>
+                        <span className="font-mono font-bold">৳{(Number(order.total_amount || 0) - Number(order.shipping_charge || 0) + Number(order.discount_amount || 0)).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between py-1 text-slate-600 font-medium">
                         <span>Delivery Charge:</span>
-                        <span className="font-mono font-bold">৳0.00</span>
+                        <span className="font-mono font-bold">৳{Number(order.shipping_charge || 0).toFixed(2)}</span>
                       </div>
+                      {Number(order.discount_amount || 0) > 0 && (
+                        <div className="flex justify-between py-1 text-emerald-700 font-medium">
+                          <span>Discount{order.coupon_code ? ` (${order.coupon_code})` : ''}:</span>
+                          <span className="font-mono font-bold">−৳{Number(order.discount_amount).toFixed(2)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between py-2 border-t-2 border-slate-900 text-sm font-black text-slate-900">
                         <span>Total Payable (COD):</span>
                         <span className="font-mono text-lg text-primary">৳{order.total_amount?.toFixed(2)}</span>
