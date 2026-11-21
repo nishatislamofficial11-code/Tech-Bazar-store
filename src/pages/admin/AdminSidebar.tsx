@@ -11,7 +11,6 @@ import {
   MessagesSquare, BookOpen, Bot, Plug, Tag, MessageSquareText,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { buildCloudinaryUrl } from '../../lib/cloudinary';
 
 export interface AdminSidebarProps {
   settings: any;
@@ -207,27 +206,22 @@ export function AdminSidebar({
         {isCollapsed && !isMobile ? (
           <button
             onClick={onToggleCollapse}
-            className="flex h-10 w-10 mx-auto items-center justify-center rounded-lg text-slate-500 hover:bg-slate-50 transition-colors"
+            aria-label="মেনু বড় করুন"
+            className="group relative flex h-10 w-10 mx-auto items-center justify-center rounded-lg hover:bg-slate-50 transition-colors"
           >
-            <PanelLeft className="h-5 w-5" strokeWidth={2} />
+            <img src="/brand/logo-mark.svg" alt="" className="h-9 w-9 rounded-[10px] group-hover:opacity-0 transition-opacity" />
+            <PanelLeft className="absolute h-5 w-5 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={2} />
           </button>
         ) : (
           <div className="flex w-full items-center justify-between">
-            <Link to="/admin" className="flex items-center gap-2 min-w-0 h-10">
-              {settings?.site_logo ? (
-                <img
-                  src={buildCloudinaryUrl(settings.site_logo, 'h_80,c_limit,f_auto,q_auto')}
-                  alt="Logo"
-                  className="h-full w-auto object-contain"
-                />
-              ) : (
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-white font-semibold text-lg shadow-sm">
-                  {(settings?.siteName?.[0] || 'B').toUpperCase()}
-                </div>
-              )}
+            <Link to="/admin" className="flex items-center gap-2.5 min-w-0 h-10" aria-label="Cloud Commerce">
+              <img src="/brand/logo-mark.svg" alt="" className="h-9 w-9 shrink-0 rounded-[10px] shadow-sm" />
+              <span className="text-[19px] leading-none tracking-tight text-slate-900 whitespace-nowrap">
+                <b className="font-bold">cloud</b><span className="font-light">commerce</span>
+              </span>
               {profile?.role === 'demo' && (
                 <span className="text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full shrink-0 shadow-2xs">
-                  Demo Mode
+                  Demo
                 </span>
               )}
             </Link>
