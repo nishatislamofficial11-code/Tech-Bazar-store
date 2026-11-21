@@ -90,7 +90,7 @@ export default function Analytics() {
       ] = await Promise.all([
         supabase
           .from('orders')
-          .select('id, total_amount, status, created_at, user_id, courier_name, courier_status, courier_tracking_code')
+          .select('id, total_amount, status, created_at, user_id, courier_name, courier_status, courier_tracking_code, discount_amount')
           .order('created_at', { ascending: false })
           .limit(5000),
         supabase
@@ -213,6 +213,8 @@ export default function Analytics() {
         orderStatusMap[order.id] = order.status;
         if (order.status !== 'cancelled') {
           totalRevenue += Number(order.total_amount || 0);
+          // Coupon discounts come out of the profit on the products
+          totalProfit -= Number(order.discount_amount || 0);
           validOrdersCount++;
         }
       });
