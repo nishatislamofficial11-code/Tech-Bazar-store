@@ -240,7 +240,14 @@ async function callApi(url, headers, body, label) {
   let res; let data;
   for (const delay of [0, 1500, 4000]) {
     if (delay) await wait(delay);
-    res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
+    // A slow model must not keep the customer waiting: give up after 20 s and let a backup company answer
+    try {
+      res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body), signal: AbortSignal.timeout(20000) });
+    } catch (e) {
+      const slow = new Error(`${label} অনেক সময় নিচ্ছে (২০ সেকেন্ডে উত্তর দেয়নি)। দ্রুত কোনো মডেল বেছে নিন`);
+      slow.busy = true;
+      throw slow;
+    }
     data = await res.json().catch(() => null);
     if (res.ok || !RETRY_STATUS.has(res.status)) break;
   }

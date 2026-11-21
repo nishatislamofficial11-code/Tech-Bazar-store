@@ -78,7 +78,10 @@ export async function onRequest(context) {
       if ((recent || []).length >= MAX_MESSAGES_PER_10_MIN) return json({ ok: false, error: 'একটু থামুন, কিছুক্ষণ পর আবার লিখুন' }, 429);
     }
 
-    const result = await handleCustomerMessage(cfg, store, conv, message, photos);
+    // Keep working even if the visitor closes the chat, so the reply is saved for when they come back
+    const work = handleCustomerMessage(cfg, store, conv, message, photos);
+    context.waitUntil?.(work.catch(() => null));
+    const result = await work;
     return json({ ok: true, reply: result.reply, status: result.status, attachments: result.attachments || [] });
   } catch (err) {
     return json({ ok: false, error: 'এখন উত্তর দেওয়া যাচ্ছে না, একটু পরে চেষ্টা করুন' }, 500);
