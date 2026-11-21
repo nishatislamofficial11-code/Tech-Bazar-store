@@ -956,7 +956,7 @@ export default function ProductDetails() {
                   disabled={displayStock <= 0}
                   className="rounded-[6px] border-[1.5px] border-[#111827] bg-white text-[#111827] hover:brightness-[0.96] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden text-ellipsis"
                 >
-                  কার্টে যোগ করুন
+                  Add to Cart
                 </button>
 
                 {/* Row 1 right - Order blue with bag icon */}
@@ -974,7 +974,7 @@ export default function ProductDetails() {
                     <line x1="3" y1="6" x2="21" y2="6"/>
                     <path d="M16 10a4 4 0 0 1-8 0"/>
                   </svg>
-                  অর্ডার করুন
+                  Order Now
                 </button>
 
                 {/* Row 2 left - WhatsApp green */}
