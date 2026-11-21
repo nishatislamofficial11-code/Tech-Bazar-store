@@ -62,6 +62,7 @@ const MerchantLogin = lazy(() => import('./pages/merchant/MerchantLogin'));
 const MerchantReset = lazy(() => import('./pages/merchant/MerchantReset'));
 const AdminBilling = lazy(() => import('./pages/admin/Billing'));
 const AiInbox = lazy(() => import('./pages/admin/ai/AiInbox'));
+const AdminCoupons = lazy(() => import('./pages/admin/Coupons'));
 const AiKnowledge = lazy(() => import('./pages/admin/ai/AiKnowledge'));
 const AiSettings = lazy(() => import('./pages/admin/ai/AiSettings'));
 const AiConnections = lazy(() => import('./pages/admin/ai/AiConnections'));
@@ -248,6 +249,7 @@ export default function App() {
                         <Route path="seo" element={<AdminSEO />} />
                         <Route path="billing" element={<AdminBilling />} />
                         <Route path="ai/inbox" element={<AiInbox />} />
+                        <Route path="coupons" element={<AdminCoupons />} />
                         <Route path="ai/knowledge" element={<AiKnowledge />} />
                         <Route path="ai/settings" element={<AiSettings />} />
                         <Route path="ai/connections" element={<AiConnections />} />

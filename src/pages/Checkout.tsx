@@ -27,6 +27,7 @@ import { trackEvent } from '../lib/analytics';
 import { CheckoutPaymentOptions, useCheckoutPayment } from '../components/CheckoutPaymentOptions';
 import { createCheckoutOrder, rememberPayment, startOnlinePayment } from '../lib/checkoutOrder';
 import { paymentQuote } from '../lib/paymentRules';
+import { CouponBox, AppliedCoupon } from '../components/CouponBox';
 
 export default function Checkout() {
   const { items, cartTotal, clearCart } = useCart();
@@ -176,7 +177,9 @@ export default function Checkout() {
     ? (hasProductDeliveryCharge ? productDeliveryCharge : settingsDeliveryCharge)
     : 0;
   const shippingCharge = isFreeDeliveryOrder ? 0 : regularDeliveryCharge + variantDeliveryCharge;
-  const orderTotal = cartTotal + shippingCharge;
+  const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
+  const discount = coupon ? Math.min(coupon.discount, cartTotal) : 0;
+  const orderTotal = Math.round((cartTotal + shippingCharge - discount) * 100) / 100;
 
   const handleCopy = (id: string) => {
     navigator.clipboard.writeText(id);
@@ -515,6 +518,7 @@ export default function Checkout() {
         delivery_area: deliveryArea, payment_method: payment.method, customer_name: fullName,
         customer_phone: cleanedPhone, customer_address: address, order_note: orderNote,
         order_source: localStorage.getItem('order_source') || 'organic',
+        coupon_code: coupon?.code || null,
       }, orderItems, incompleteOrderId);
       setIncompleteOrderId(null);
 
@@ -879,6 +883,14 @@ export default function Checkout() {
                      )}
                    </div>
                    
+                   {discount > 0 && (
+                     <div className="flex justify-between text-emerald-600 font-medium">
+                       <span>ছাড় ({coupon?.code})</span>
+                       <span>−৳{discount.toFixed(2)}</span>
+                     </div>
+                   )}
+                   <CouponBox subtotal={cartTotal} value={coupon} onChange={setCoupon} />
+
                    <CheckoutPaymentOptions payment={payment} total={orderTotal} shipping={shippingCharge} />
 
                    <div className="flex justify-between text-lg font-black text-slate-900 pt-4 border-t border-slate-100 mt-4">
