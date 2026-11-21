@@ -8,7 +8,7 @@ import {
   Search, X, PanelLeftClose, PanelLeft, 
   Globe, Receipt, Box, LifeBuoy, Settings, CreditCard,
   ChevronDown, ChevronRight, Gem, UserRound,
-  MessagesSquare, BookOpen, Bot, Plug, Tag,
+  MessagesSquare, BookOpen, Bot, Plug, Tag, MessageSquareText,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { buildCloudinaryUrl } from '../../lib/cloudinary';
@@ -62,6 +62,7 @@ export const NAV_ITEMS: NavItemDef[] = [
   { section: 'Sales Tools', name: 'Logistics', path: '/admin/couriers', icon: Truck, adminOnly: true },
   { section: 'Sales Tools', name: 'Tracking', path: '/admin/pixel', icon: Target, adminOnly: true },
   { section: 'Sales Tools', name: 'Coupons', path: '/admin/coupons', icon: Tag, adminOnly: true },
+  { section: 'Sales Tools', name: 'SMS Setup', path: '/admin/sms-setup', icon: MessageSquareText, adminOnly: true },
   { 
     section: 'Sales Tools',
     name: 'Fraud Guard', 

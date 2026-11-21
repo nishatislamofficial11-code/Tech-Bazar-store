@@ -2,6 +2,7 @@
 // Prices, stock and delivery charge follow the same rules as the website checkout
 // (public.create_checkout_order), so an AI order costs exactly what the website would charge.
 import { rest, notifyStoreTelegram, escapeHtml } from './_store-lib.js';
+import { sendOrderSms } from './_order-sms.js';
 
 const PHONE = /^01[3-9]\d{8}$/;
 const taka = (n) => `৳${Number(n || 0).toLocaleString('en-US')}`;
@@ -110,6 +111,7 @@ export async function createAiOrder(cfg, store, conv, order, products) {
     body: JSON.stringify({ customer_name: name, customer_phone: phone }),
   }).catch(() => null);
 
+  await sendOrderSms(cfg, store.id, saved.id, 'placed');
   const shortId = String(saved.id).slice(0, 8).toUpperCase();
   const itemsText = lines.map((l) => `${l.p.title} × ${l.qty}`).join(', ');
   await notifyStoreTelegram(cfg, store.id,

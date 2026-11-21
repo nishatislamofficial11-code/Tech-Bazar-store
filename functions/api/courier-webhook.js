@@ -5,6 +5,7 @@
  *       "Authorization: Bearer <token>" (Steadfast) or "X-PATHAO-Signature: <token>" (Pathao).
  */
 import { serverConfig, rest, resolveStore, storeSlugFromUrl } from './_store-lib.js';
+import { sendOrderSms } from './_order-sms.js';
 
 // Pathao checks for this fixed header when a webhook URL is first added
 const PATHAO_INTEGRATION_SECRET = 'f3992ecc-59da-4cbe-a049-a13da2018d51';
@@ -78,6 +79,7 @@ export async function onRequest(context) {
         body: JSON.stringify({ courier_status: rawStatus, status: newStatus }),
       });
     }
+    if (newStatus === 'shipped') await sendOrderSms(cfg, store.id, order.id, 'shipped');
     return reply({ status: 'success', order_status: newStatus }, 202);
   } catch (err) {
     return reply({ status: 'error', message: err.message || 'error' }, 500);

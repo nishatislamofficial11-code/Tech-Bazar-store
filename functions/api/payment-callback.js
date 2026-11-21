@@ -1,5 +1,6 @@
 import { money, validateSettlement, verifyPayment, isAttemptId } from './_payment-lib.js';
 import { serverConfig, rest, notifyStoreTelegram, escapeHtml } from './_store-lib.js';
+import { sendOrderSms } from './_order-sms.js';
 
 async function readParams(request) {
   const url = new URL(request.url);
@@ -51,6 +52,7 @@ ${lines}
 <b>🧾 Due on delivery:</b> ৳${due.toFixed(2)}
 <b>🕒 Time (BD):</b> ${time}`;
   await notifyStoreTelegram(cfg, order.store_id, message);
+  await sendOrderSms(cfg, order.store_id, order.id, 'placed');
 }
 
 async function handle(context) {

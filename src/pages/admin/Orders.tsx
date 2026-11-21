@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
+import { notifyOrderSms } from '../../lib/orderSms';
 import { ShoppingBag, Eye, X, PackageOpen, Truck, CheckCircle, Copy, Send, Store, Pencil, Plus, Printer, FileText, CheckSquare, Square, RefreshCcw, ShieldAlert, Sparkles, AlertCircle, MessageSquareWarning, UserCheck, History, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
@@ -565,6 +566,7 @@ export default function AdminOrders() {
     try {
       const { error } = await supabase.from('orders').update({ status }).eq('id', id);
       if (error) throw error;
+      if (status === 'shipped') notifyOrderSms(id, 'shipped');
       toast.success('Order status updated');
       fetchOrders();
       if (selectedOrder && selectedOrder.id === id) {
@@ -624,6 +626,7 @@ export default function AdminOrders() {
           courier_sent_at: new Date().toISOString(),
           status: 'processing'
         }).eq('id', order.id);
+        notifyOrderSms(order.id, 'shipped');
 
         toast.success(`Dispatched to Steadfast! Tracking: ${res.consignment.tracking_code}`);
         fetchOrders();
@@ -723,6 +726,7 @@ export default function AdminOrders() {
           courier_sent_at: new Date().toISOString(),
           status: 'processing'
         }).eq('id', order.id);
+        notifyOrderSms(order.id, 'shipped');
 
         toast.success(`Dispatched to Pathao! Consignment: ${res.data.consignment_id}`);
         fetchOrders();

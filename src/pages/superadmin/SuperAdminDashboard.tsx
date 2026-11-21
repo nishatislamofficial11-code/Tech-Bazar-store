@@ -6,6 +6,7 @@ import { Store, Copy, LogOut, RefreshCw, CheckCircle2, XCircle, Settings2, Trash
 import { filterStores } from '../../lib/storeSearch';
 import { PlanBadge, PlanActions, PlatformSettingsCard, LandingSettingsCard, SmsSettingsCard, SuperCreateStoreForm, type PlanInfo } from '../../components/superadmin/PlatformControls';
 import { AiSuperCard } from '../../components/superadmin/AiSuperCard';
+import { SmsCreditsCard } from '../../components/superadmin/SmsCreditsCard';
 
 interface StoreRow extends PlanInfo {
   id: string;
@@ -363,7 +364,7 @@ export default function SuperAdminDashboard() {
         )}
         {tab === 'new' && <SuperCreateStoreForm onCreated={() => { loadStores(); }} />}
         {tab === 'plan' && <PlatformSettingsCard />}
-        {tab === 'sms' && <SmsSettingsCard />}
+        {tab === 'sms' && <><SmsSettingsCard /><SmsCreditsCard stores={stores} /></>}
         {tab === 'ai' && <AiSuperCard stores={stores} />}
         {tab === 'landing' && <LandingSettingsCard />}
       </main>

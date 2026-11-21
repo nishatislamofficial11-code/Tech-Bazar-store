@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { notifyOrderSms } from '../../lib/orderSms';
 import { useSettings } from '../../contexts/SettingsContext';
 import toast from 'react-hot-toast';
 import { 
@@ -352,6 +353,7 @@ export default function AdminCouriers() {
               status: 'processing',
             })
             .eq('id', order.id);
+        notifyOrderSms(order.id, 'shipped');
 
           successCount++;
         }
@@ -448,6 +450,7 @@ export default function AdminCouriers() {
                 status: 'processing',
               })
               .eq('id', order.id);
+        notifyOrderSms(order.id, 'shipped');
 
             successCount++;
           }
