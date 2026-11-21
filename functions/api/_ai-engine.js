@@ -219,7 +219,7 @@ needs_human=true হলে reply-তে কাস্টমারকে ভদ্
 }
 
 // Neutral message list: { role, content, image? } — each company's function turns it into its own format.
-// Only the customer's 2 most recent photos are sent, made smaller by Cloudinary.
+// Only the photo in the newest message is sent, made smaller by Cloudinary.
 function toApiMessages(history) {
   const out = [];
   let images = 0;
@@ -227,7 +227,9 @@ function toApiMessages(history) {
     const m = history[i];
     if (m.role === 'system') continue;
     const role = m.role === 'customer' ? 'user' : 'assistant';
-    const photo = role === 'user' && images < 2 ? (m.attachments || []).find((a) => a?.type === 'image')?.url : null;
+    // Only a photo in the customer's newest message is sent; older photos confused the AI on later messages
+    const isNewest = i === history.length - 1;
+    const photo = role === 'user' && isNewest && images < 2 ? (m.attachments || []).find((a) => a?.type === 'image')?.url : null;
     if (photo) images++;
     out.unshift({ role, content: m.content, ...(photo ? { image: photo.replace('/upload/', '/upload/w_800,c_limit,q_auto,f_jpg/') } : {}) });
   }
