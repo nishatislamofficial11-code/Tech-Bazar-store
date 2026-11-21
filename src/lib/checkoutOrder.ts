@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { paymentRequest } from './storePaymentApi';
 import { currentStoreSlug } from './currentStore';
+import { notifyOrderSms } from './orderSms';
 
 export async function createCheckoutOrder(order: Record<string, unknown>, items: Record<string, unknown>[], draftId: string | null) {
   const { data, error } = await supabase.rpc('create_checkout_order', {
@@ -8,6 +9,8 @@ export async function createCheckoutOrder(order: Record<string, unknown>, items:
   });
   if (error) throw error;
   if (!data?.id || !data?.checkout_token) throw new Error('অর্ডার তৈরি হয়নি');
+  // Cash-on-delivery orders are complete now; paid orders get their SMS only after payment
+  if (!(Number(data.advance_required) > 0)) notifyOrderSms(data.id, 'placed', data.checkout_token);
   return data as { id: string; checkout_token: string; advance_required: number; total_amount: number };
 }
 

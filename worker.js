@@ -9,6 +9,7 @@ import { onRequest as otp } from './functions/api/otp.js';
 import { onRequest as aiChat } from './functions/api/ai-chat.js';
 import { onRequest as aiWidget } from './functions/api/ai-widget.js';
 import { onRequest as aiModels } from './functions/api/ai-models.js';
+import { onRequest as orderSms } from './functions/api/order-sms.js';
 import { onRequest as middleware } from './functions/_middleware.js';
 
 const routes = {
@@ -21,6 +22,7 @@ const routes = {
   '/api/ai-chat': aiChat,
   '/api/ai-widget': aiWidget,
   '/api/ai-models': aiModels,
+  '/api/order-sms': orderSms,
 };
 
 export default {
